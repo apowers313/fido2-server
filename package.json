@@ -1,0 +1,28 @@
+{
+  "name": "fido2-server",
+  "version": "0.0.1",
+  "description": "A FIDO 2.0 / W3C WebAuthn server",
+  "main": "server.js",
+  "scripts": {
+    "test": "mocha",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "fido2",
+    "w3c",
+    "webauth",
+    "webauthn",
+    "fido",
+    "server",
+    "authentication",
+    "auth"
+  ],
+  "author": "Adam Powers",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "body-parser": "^1.15.0",
+    "chai": "^3.5.0",
+    "express": "^4.13.4",
+    "mocha": "^2.4.5"
+  }
+}

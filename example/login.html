@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test FIDO Login</title>
+</head>
+
+<body>
+    <script src="/ms-webauth-polyfill.js"></script>
+    <script type="text/javascript">
+    function fidoLogin() {
+        console.log("fidoLogin");
+
+        // stop default submit event
+        event.preventDefault();
+
+        var challenge = "abc123def456"; // TODO: get challenge from server
+        var whitelist = [{
+            type: 'ScopedCred',
+            id: "8DD7414D-EE43-474C-A05D-FDDB828B663B"
+        }];
+
+        console.log("doing getAssertion");
+        webauthn.getAssertion(challenge, {}, whitelist, {})
+            .then(function(assn) {
+                console.log("getAssertion done");
+                console.log("Got assertion:");
+                console.log(assn);
+
+                // send registration to server
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/login", true);
+                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+                // xhr.send(JSON.stringify(req));
+                xhr.send(JSON.stringify(assn));
+                xhr.onload = function() {
+                    console.log("onload");
+                    console.log("Got:");
+                    console.log(xhr.response);
+                    // TODO: check response to make sure it's okay
+                    var elem = document.getElementById("success");
+                    elem.innerHTML = "Successful login! Normally I'd send you to your homepage, but this is a fake website...";
+                };
+            })
+            .catch(function(err) {
+                console.log("getAssertion error:", err);
+                throw err;
+            });
+    }
+    </script>
+    <h1>Login</h1> Login to your FIDO-enabled account:
+    <form onsubmit="fidoLogin()">
+        Username:&nbsp;
+        <input type="text"></input>
+        <br>
+        <input type="submit" value="FIDO Login">
+    </form>
+    <div id="success"></div>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test FIDO Register</title>
+</head>
+
+<body>
+    <script src="/ms-webauth-polyfill.js"></script>
+    <script type="text/javascript">
+    function fidoRegister() {
+        console.log("fidoRegister");
+
+        // stop default submit event
+        event.preventDefault();
+
+        var accountInfo = {
+            rpDisplayName: 'Facebook', // human readable name of service
+            userDisplayName: document.getElementById("userDisplayName").value // name of person registering
+        };
+
+        var cryptoParameters = [{
+            type: 'FIDO_2_0',
+            algorithm: 'RSASSA-PKCS1-v1_5'
+        }];
+
+
+        console.log("doing makeCredential");
+        window.webauthn.makeCredential(accountInfo, cryptoParameters)
+            .then(function(cred) {
+                console.log("makeCredential resolved");
+                console.log("Got credential:");
+                console.log(cred);
+
+                // send registration to server
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/register", true);
+                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+                // xhr.send(JSON.stringify(req));
+                xhr.send(JSON.stringify(cred));
+                xhr.onload = function() {
+                    console.log("onload");
+                    console.log("Got:");
+                    console.log(xhr.response);
+                    // TODO: check response to make sure it's okay
+                    var elem = document.getElementById("success");
+                    elem.innerHTML = "Success! Redirecting to login page...";
+                    setTimeout(function() {
+                        window.location = "/login.html";
+                    }, 3000);
+                };
+            })
+            .catch(function(err) {
+                console.log("makeCredential error:", err);
+                throw (err);
+            });
+    }
+    </script>
+    <h1>Register</h1> Register for an account:
+    <form onsubmit="fidoRegister()">
+        Username:&nbsp;
+        <input id="userDisplayName" type="text" value="John P. Smith"></input>
+        <br>
+        <input type="submit" value="FIDO Register">
+    </form>
+    <br>
+    <div id="success"></div>
+</body>
+
+</html>
