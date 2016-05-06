@@ -1,13 +1,14 @@
 var _ = require("lodash");
 var bunyan = require("bunyan");
 
+// TODO: freeze this module to make it tamper resistant
+
 module.exports = ServerAudit;
 
 function ServerAudit(opt) {
     var levels = {
 
     };
-    if (opt === undefined) opt = {};
     var defaults = {
         name: "FIDO-Server",
         level: "trace",
@@ -19,22 +20,34 @@ function ServerAudit(opt) {
     this.level = opt.level;
     this.outputFile = opt.outputFile;
 
-    this.logger = bunyan.createLogger({
-        name: this.name,
-        level: this.level,
-        streams: [{
-            path: this.outputFile,
-            level: this.level
-        }, {
-            stream: process.stdout,
-            level: this.level
-        }]
-    });
-    this.logger.info("Audit log starting");
-    process.on('exit', function() {
-        this.shutdown();
-    }.bind(this));
+    console.log("Bunyan options: " + opt);
 }
+
+ServerAudit.prototype.init = function() {
+    return new Promise(function(resolve, reject) {
+        this.logger = bunyan.createLogger({
+            name: this.name,
+            level: this.level,
+            streams: [{
+                    path: this.outputFile,
+                    level: this.level
+                },
+                // {
+                //     stream: process.stdout,
+                //     level: this.level
+                // }
+            ]
+        });
+        this.logger.info("Audit log starting");
+
+        process.on('exit', function() {
+            this.shutdown();
+        }.bind(this));
+
+        console.log("ServerAudit doing callback");
+        resolve(this);
+    }.bind(this));
+};
 
 ServerAudit.prototype.log = function(level) {
     // switch (level) {
@@ -81,6 +94,7 @@ ServerAudit.prototype.flush = function() {
 
 ServerAudit.prototype.shutdown = function() {
     this.logger.info("Audit log shutting down");
+    return Promise.resolve(null);
 };
 
 ServerAudit.prototype.list = function() {

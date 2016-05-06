@@ -23,10 +23,15 @@
     "body-parser": "^1.15.0",
     "chai": "^3.5.0",
     "express": "^4.13.4",
-    "mocha": "^2.4.5"
+    "mocha": "^2.4.5",
+    "sails-memory": "^0.10.6"
   },
   "dependencies": {
+    "async": "^2.0.0-rc.4",
     "bunyan": "^1.8.1",
-    "lodash": "^4.11.2"
+    "lodash": "^4.11.2",
+    "node-uuid": "^1.4.7",
+    "sails-disk": "^0.10.9",
+    "waterline": "^0.12.1"
   }
 }
