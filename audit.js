@@ -23,7 +23,7 @@ function ServerAudit(opt) {
     console.log("Bunyan options: " + opt);
 }
 
-ServerAudit.prototype.init = function() {
+ServerAudit.prototype.init = function(server) {
     return new Promise(function(resolve, reject) {
         this.logger = bunyan.createLogger({
             name: this.name,

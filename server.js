@@ -42,10 +42,13 @@ function loadModule(ext) {
         console.log ("Loading " + ext + " ...");
         Module = require (ext);
         module = new Module();
-        return module.init(); // return a promise
+        // return a promise
+        return module.init(this); 
     }
 
-    return ext;
+    // either it's already a promise, 
+    // or Promise will resolve it to whatever it already is
+    return ext; 
 }
 
 FIDOServer.prototype.init = function() {
@@ -57,16 +60,11 @@ FIDOServer.prototype.init = function() {
 
         Promise.all(promiseList)
             .then(function(res) {
-                console.log("Okay");
-                console.log(res);
-                res[0].info("it works?");
                 var finalModules = _.zipObject (moduleNames, res);
                 _.extend (this, finalModules);
                 resolve(this);
             })
             .catch(function(err) {
-                console.log("Err");
-                console.log(err);
                 reject(err);
             });
     }.bind(this));
