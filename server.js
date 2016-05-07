@@ -32,90 +32,110 @@ function FIDOServer(opt) {
     // - audit app name
     // - account waterline orm adapter
     // TODO: validate options
-
-    this.opt = opt;
+    _.extend(this, opt);
+    // this.opt = opt;
 }
+
+FIDOServer.prototype.init = function() {
+    console.log("Initializing ...");
+    return new Promise(function(resolve, reject) {
+        var modules = _.mapValues(this.modules, loadModule);
+        var moduleNames = _.keys(modules);
+        var promiseList = _.values(modules);
+
+        Promise.all(promiseList)
+            .then(function(res) {
+                console.log("FIDO Server started.");
+                var finalModules = _.zipObject(moduleNames, res);
+                _.extend(this, finalModules);
+                resolve(this);
+            }.bind(this))
+            .catch(function(err) {
+                reject(err);
+            }.bind(this));
+    }.bind(this));
+};
 
 function loadModule(ext) {
     var module, Module, ret;
     if (typeof ext === "string") {
-        console.log ("Loading " + ext + " ...");
-        Module = require (ext);
+        console.log("Loading " + ext + " ...");
+        Module = require(ext);
         module = new Module();
         // return a promise
-        return module.init(this); 
+        return module.init(this);
     }
 
     // either it's already a promise, 
     // or Promise will resolve it to whatever it already is
-    return ext; 
+    return ext;
 }
 
-FIDOServer.prototype.init = function() {
-    console.log ("Initializing ...");
+FIDOServer.prototype.shutdown = function() {
     return new Promise(function(resolve, reject) {
-        var modules = _.mapValues (this.opt.modules, loadModule);
-        var moduleNames = _.keys (modules);
-        var promiseList = _.values (modules);
-
+        console.log("FIDO Server shutting down ...");
+        promiseList = _.invokeMap(this.modules, "shutdown");
         Promise.all(promiseList)
             .then(function(res) {
-                var finalModules = _.zipObject (moduleNames, res);
-                _.extend (this, finalModules);
-                resolve(this);
+                console.log("Server shutdown successfully");
+                return resolve(res);
             })
             .catch(function(err) {
-                reject(err);
+                console.log("Error shutting down modules");
+                console.log(err);
+                return reject(err);
             });
     }.bind(this));
 };
 
-FIDOServer.prototype.shutdown = function() {
+FIDOServer.prototype.serverInfo = function() {
     return new Promise(function(resolve, reject) {
-        // TODO: shutdown modules
+        var ret = {};
+        // ret.accountInformation = {};
+        // ret.sessionId = 
+        // ret.blacklist = [];
+        // ret.credentialExtensions = [];
+        ret.cryptoParameters = [];
+        ret.attestationChallenge = crypto.randomBytes(256).toString("hex");
+
+        return resolve(ret);
     }.bind(this));
 };
 
-FIDOServer.prototype.makeCredentialParms = function(cb) {
-    var ret = {};
-    // ret.accountInformation = {};
-    // ret.sessionId = 
-    // ret.blacklist = [];
-    // ret.credentialExtensions = [];
-    ret.cryptoParameters = [];
-    ret.attestationChallenge = crypto.randomBytes(256).toString("hex");
+FIDOServer.prototype.makeCredentialResponse = function(res, ctx) {
+    return new Promise(function(resolve, reject) {
+        console.log(res);
+        console.log(ctx);
+        // res.credential
+        // res.publicKey
+        // res.attestation
+        // save key and credential with account information
 
-    cb(null, ret);
+        resolve(null);
+    }.bind(this));
 };
 
-FIDOServer.prototype.makeCredentialResponse = function(res, ctx, cb) {
-    console.log(res);
-    console.log(ctx);
-    // res.credential
-    // res.publicKey
-    // res.attestation
-    // save key and credential with account information
+FIDOServer.prototype.getAssertionParams = function() {
+    return new Promise(function(resolve, reject) {
+        var ret = {};
+        // ret.sessionId = 
+        // ret.assertionChallenge = 
+        // ret.whitelist =
+        // ret.assertionExtensions =
 
-    cb(null, null);
+        resolve(ret);
+    }.bind(this));
 };
 
-FIDOServer.prototype.getAssertionParams = function(cb) {
-    var ret = {};
-    // ret.sessionId = 
-    // ret.assertionChallenge = 
-    // ret.whitelist =
-    // ret.assertionExtensions =
+FIDOServer.prototype.getAssertionResponse = function(res, ctx) {
+    return new Promise(function(resolve, reject) {
+        console.log(res);
+        console.log(ctx);
+        // res.credential = 
+        // res.clientData =
+        // res.authenticatorData =
+        // res.signature = 
 
-    cb(null, ret);
-};
-
-FIDOServer.prototype.getAssertionResponse = function(res, ctx, cb) {
-    console.log(res);
-    console.log(ctx);
-    // res.credential = 
-    // res.clientData =
-    // res.authenticatorData =
-    // res.signature = 
-
-    cb(null, null);
+        resolve(null);
+    }.bind(this));
 };

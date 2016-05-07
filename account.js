@@ -6,15 +6,11 @@ var uuid = require("node-uuid");
 module.exports = ServerAccount;
 
 function ServerAccount(opts, cb) {
-	console.log("new server account");
-	console.log("ServerAccount constructor done");
-	this.name = "binkey schmoo";
 }
 
 ServerAccount.prototype.init = function(server) {
 	return new Promise(function(resolve, reject) {
 		var waterline = new Waterline();
-		console.log("waterline init");
 
 		var waterlineConfig = {
 			adapters: {
@@ -82,9 +78,7 @@ ServerAccount.prototype.init = function(server) {
 		waterline.loadCollection(userCollection);
 		waterline.loadCollection(credentialCollection);
 
-		console.log("doing init...");
 		waterline.initialize(waterlineConfig, function(err, ontology) {
-			console.log("init done...");
 
 			if (err) {
 				console.log("Error in waterline init: " + err);
@@ -96,15 +90,22 @@ ServerAccount.prototype.init = function(server) {
 			this.user = ontology.collections.user;
 			this.credential = ontology.collections.credential;
 
-			console.log("waterline init done");
-
 			return resolve(this);
 		}.bind(this));
 	}.bind(this));
 };
 
 ServerAccount.prototype.shutdown = function() {
-	return Promise.resolve(null);
+	return new Promise (function (resolve, reject) {
+		this.waterline.teardown(function(err, res) {
+			if (err) {
+				console.log ("Waterline shutdown failed");
+				reject (err);
+			}
+
+			resolve (res);
+		});
+	}.bind(this));
 };
 
 ServerAccount.prototype.listUsers = function() {

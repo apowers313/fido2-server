@@ -19,8 +19,6 @@ function ServerAudit(opt) {
     this.name = opt.name;
     this.level = opt.level;
     this.outputFile = opt.outputFile;
-
-    console.log("Bunyan options: " + opt);
 }
 
 ServerAudit.prototype.init = function(server) {
@@ -44,7 +42,6 @@ ServerAudit.prototype.init = function(server) {
             this.shutdown();
         }.bind(this));
 
-        console.log("ServerAudit doing callback");
         resolve(this);
     }.bind(this));
 };
