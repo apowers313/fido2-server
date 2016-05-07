@@ -40,10 +40,9 @@ describe("basic tests", function() {
 	});
 });
 
-describe.only("logging tests", function() {
+describe.skip("logging tests", function() {
 	it("logs", function() {
 		return new FIDOServer().init().then(function(s) {
-			console.log ("!!!! SERVER CALLBACK");
 			s.audit.fatal("fatal");
 			s.audit.error("error");
 			s.audit.error(new TypeError("type error"));
@@ -55,9 +54,27 @@ describe.only("logging tests", function() {
 	});
 });
 
-describe("account management", function() {
-	it("creates account", function() {
-		var s = new FIDOServer();
+describe.only("account management", function() {
+	it("creates and finds user", function(done) {
+		return new FIDOServer().init().then(function(s) {
+			console.log (s.account.name);
+			// s.account.listUsers().then(function(users) {});
+			s.account.createUser("adam@fidoalliance.org", "Adam", "Powers").then(function (createdUser) {
+				console.log ("created user:",createdUser);
+				s.account.getUserByEmail ("adam@fidoalliance.org").then(function (foundUser) {
+					console.log ("found user:", foundUser);
+					// can't do deep-equal, since other attributes are added behind the scenes
+					assert.equal (createdUser.firstName, "Adam");
+					assert.equal (createdUser.lastName, "Powers");
+					assert.equal (createdUser.email, "adam@fidoalliance.org");
+					assert.equal (createdUser.id, foundUser.id);
+					assert.equal (foundUser.firstName, createdUser.firstName);
+					assert.equal (foundUser.lastName, createdUser.lastName);
+					assert.equal (foundUser.email, createdUser.email);
+					done();
+				});
+			});
+		});
 	});
 });
 
