@@ -1,4 +1,6 @@
 module.exports = {
+    attestationChallenge: "abc123def456",
+    userId: "adam@fidoalliance.org",
     validMakeCredential: {
         credential: {
             type: 'ScopedCred',

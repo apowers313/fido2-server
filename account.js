@@ -5,8 +5,7 @@ var uuid = require("node-uuid");
 
 module.exports = ServerAccount;
 
-function ServerAccount(opts, cb) {
-}
+function ServerAccount(opts, cb) {}
 
 ServerAccount.prototype.init = function(server) {
 	return new Promise(function(resolve, reject) {
@@ -30,20 +29,22 @@ ServerAccount.prototype.init = function(server) {
 			attributes: { // TODO
 				firstName: "string",
 				lastName: "string",
-				email: {
+				id: { // account name, email, etc.
 					type: "string",
-					unique: true,
-					required: true	
-				},
-				id: {
-					type: "text",
 					primaryKey: true,
+					unique: true,
+					required: true
+				},
+				guid: {
+					type: "text",
 					unique: true,
 					defaultsTo: function() {
 						return uuid.v4();
 					}
 				},
 				imageUrl: "string",
+				attestation: "string",
+				lastAttestationUpdate: "datetime",
 				otherInfo: "json",
 
 				// Add a reference to Pets
@@ -51,6 +52,14 @@ ServerAccount.prototype.init = function(server) {
 					collection: "credential",
 					via: "user"
 				}
+			},
+			beforeUpdate: function(values, next) {
+				console.log("updating:", values);
+				if (values.attestation !== undefined) {
+					values.lastAttestationUpdate = new Date();
+				}
+				console.log("updating:", values);
+				next();
 			}
 		});
 
@@ -96,14 +105,14 @@ ServerAccount.prototype.init = function(server) {
 };
 
 ServerAccount.prototype.shutdown = function() {
-	return new Promise (function (resolve, reject) {
+	return new Promise(function(resolve, reject) {
 		this.waterline.teardown(function(err, res) {
 			if (err) {
-				console.log ("Waterline shutdown failed");
-				reject (err);
+				console.log("Waterline shutdown failed");
+				reject(err);
 			}
 
-			resolve (res);
+			resolve(res);
 		});
 	}.bind(this));
 };
@@ -112,27 +121,60 @@ ServerAccount.prototype.listUsers = function() {
 	return this.user.find().populate("credentials");
 };
 
-ServerAccount.prototype.createUser = function(email, firstName, lastName, otherInfo) {
-	if (typeof email !== "string") {
-		return Promise.reject(new TypeError ("email required when creating user"));
+ServerAccount.prototype.findOrCreateUser = function(id, userInfo) {
+	console.log("findOrCreateUser");
+	if (typeof id !== "string") {
+		return Promise.reject(new TypeError("id required when creating user"));
 	}
+
+	userInfo = userInfo || {};
+
 	var user = {
-		email: email,
-		firstName: firstName,
-		lastName: lastName,
-		otherInfo: otherInfo
-	}
-	return this.user.create(user);
+		id: id,
+		firstName: userInfo.firstName,
+		lastName: userInfo.lastName,
+		otherInfo: userInfo.otherInfo
+	};
+	console.log ("findOrCreate:", user);
+	return this.user.findOrCreate({id: id}, user);
+};
+
+ServerAccount.prototype.getUserByGuid = function(guid) {
+	return this.user
+		.findOne()
+		.where({
+			guid: guid
+		}).populate("credentials");
 };
 
 ServerAccount.prototype.getUserById = function(id) {
-	return this.user.findOne().where({id: id}).populate("credentials");
+	return this.user
+		.findOne()
+		.where({
+			id: id
+		})
+		.populate("credentials");
 };
 
-ServerAccount.prototype.getUserByEmail = function(email) {
-	return this.user.findOne().where({email: email}).populate("credentials");
-};
+ServerAccount.prototype.updateUserAttestation = function(id, attestation) {
+	if (typeof id !== "string") {
+		return Promise.reject (new TypeError ("updateUserAttestation expected id to be string"));
+	}
 
+	console.log (attestation);
+	if (typeof attestation !== "string" ||
+		attestation.length < 8) {
+		return Promise.reject (new TypeError ("updateUserAttestation expected attestation to be string at least 8 characters long"));
+	}
+
+
+	return this.user
+		.update({
+			id: id
+		}, {
+			attestation: attestation
+		});
+};
 
 ServerAccount.prototype.updateUser = function() {
 

@@ -21,39 +21,31 @@ describe.only("basic tests", function(done) {
 		});
 	});
 
-	it.only("gets makeCredential parameters", function() {
+	it.only("gets getAttestationChallenge", function(done) {
 		assert.equal(server.rpid, "example.com");
-		return server.serverInfo().then(function(info) {
+		console.log ("doing getAttestationChallenge");
+		return server.getAttestationChallenge(helpers.userId).then(function(info) {
+			console.log ("getAttestationChallenge");
 			assert.isDefined(info);
 			assert.isDefined(info.attestationChallenge);
 			assert.lengthOf(info.attestationChallenge, 512);
+			done();
 		});
 	});
 
-	it.skip("get makeCredentialResponse", function(done) {
-		new FIDOServer().init().then(function(server) {
-			server.makeCredentialResponse(helpers.validMakeCredential, null, function(err, res) {
-				assert.isNull(err);
-				done();
-			});
-		});
+	it.skip("get makeCredentialResponse", function() {
+		return server.makeCredentialResponse(helpers.userId, helpers.validMakeCredential).then(function(res) {});
 	});
 
-	it.skip("get getAssertionParams", function(done) {
-		new FIDOServer().init().then(function(server) {
-			server.getAssertionParams(function(err, res) {
-				assert.isNull(err);
-				done();
-			});
+	it.skip("get getAttestationChallenge", function(done) {
+		return server.getAttestationChallenge(helpers.userId).then(function(res) {
+			done();
 		});
 	});
 
 	it.skip("get getAssertionResponse", function(done) {
-		new FIDOServer().init().then(function(server) {
-			server.getAssertionResponse(helpers.validGetAssertion, null, function(err, res) {
-				assert.isNull(err);
-				done();
-			});
+		return server.getAssertionResponse(helpers.userId, helpers.validGetAssertion).then(function(res) {
+			done();
 		});
 	});
 });
@@ -77,18 +69,21 @@ describe("account management", function() {
 		return new FIDOServer().init().then(function(s) {
 			console.log(s.account.name);
 			// s.account.listUsers().then(function(users) {});
-			s.account.createUser("adam@fidoalliance.org", "Adam", "Powers").then(function(createdUser) {
+			s.account.findOrCreateUser("adam@fidoalliance.org", {
+				firstName: "Adam",
+				lastName: "Powers"
+			}).then(function(createdUser) {
 				console.log("created user:", createdUser);
-				s.account.getUserByEmail("adam@fidoalliance.org").then(function(foundUser) {
+				s.account.getUserById("adam@fidoalliance.org").then(function(foundUser) {
 					console.log("found user:", foundUser);
 					// can't do deep-equal, since other attributes are added behind the scenes
 					assert.equal(createdUser.firstName, "Adam");
 					assert.equal(createdUser.lastName, "Powers");
-					assert.equal(createdUser.email, "adam@fidoalliance.org");
-					assert.equal(createdUser.id, foundUser.id);
+					assert.equal(createdUser.id, "adam@fidoalliance.org");
+					assert.equal(createdUser.guid, foundUser.guid);
 					assert.equal(foundUser.firstName, createdUser.firstName);
 					assert.equal(foundUser.lastName, createdUser.lastName);
-					assert.equal(foundUser.email, createdUser.email);
+					assert.equal(foundUser.id, createdUser.id);
 					done();
 				});
 			});
