@@ -121,8 +121,8 @@ ServerAccount.prototype.listUsers = function() {
 	return this.user.find().populate("credentials");
 };
 
-ServerAccount.prototype.findOrCreateUser = function(id, userInfo) {
-	console.log("findOrCreateUser");
+ServerAccount.prototype.createUser = function(id, userInfo) {
+	console.log("createUser");
 	if (typeof id !== "string") {
 		return Promise.reject(new TypeError("id required when creating user"));
 	}
@@ -135,8 +135,8 @@ ServerAccount.prototype.findOrCreateUser = function(id, userInfo) {
 		lastName: userInfo.lastName,
 		otherInfo: userInfo.otherInfo
 	};
-	console.log ("findOrCreate:", user);
-	return this.user.findOrCreate({id: id}, user);
+	console.log("createUser:", user);
+	return this.user.create(user);
 };
 
 ServerAccount.prototype.getUserByGuid = function(guid) {
@@ -158,13 +158,13 @@ ServerAccount.prototype.getUserById = function(id) {
 
 ServerAccount.prototype.updateUserAttestation = function(id, attestation) {
 	if (typeof id !== "string") {
-		return Promise.reject (new TypeError ("updateUserAttestation expected id to be string"));
+		return Promise.reject(new TypeError("updateUserAttestation expected id to be string"));
 	}
 
-	console.log (attestation);
+	console.log(attestation);
 	if (typeof attestation !== "string" ||
 		attestation.length < 8) {
-		return Promise.reject (new TypeError ("updateUserAttestation expected attestation to be string at least 8 characters long"));
+		return Promise.reject(new TypeError("updateUserAttestation expected attestation to be string at least 8 characters long"));
 	}
 
 

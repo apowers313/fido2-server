@@ -46,15 +46,6 @@ ServerAudit.prototype.init = function(server) {
     }.bind(this));
 };
 
-ServerAudit.prototype.log = function(level) {
-    // switch (level) {
-    // }
-};
-
-ServerAudit.prototype.logError = function(status, error) {
-
-};
-
 ServerAudit.prototype.fatal = function() {
     callWithArgs(this.logger, "error", arguments);
     callWithArgs(this, "alert", arguments);
