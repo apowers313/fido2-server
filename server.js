@@ -11,11 +11,14 @@ function FIDOServer(opt) {
         rpid: "example.com", // TLD + 1
         blacklist: [],
         cryptoParameterPrefs: [],
+        attestationSize: 32,
+        attestationTimeout: 300, // 5 minutes
+        assertionTimeout: 300, // 5 minutes
         modules: {
             audit: "./audit.js",
             comm: "./comm.js",
-            riskengine: "./riskengine.js",
-            mdsclient: "./mdsclient.js", // TODO: rename to metadata manager?
+            riskEngine: "./riskengine.js",
+            metadataManager: "./metadatamanager.js",
             extension: "./extension.js",
             account: "./account.js",
         }
@@ -67,9 +70,11 @@ function loadModule(ext) {
         return module.init(this);
     }
 
-    // either it's already a promise, 
-    // or Promise will resolve it to whatever it already is
-    return ext;
+    if (typeof ext !== "object" ||
+        typeof ext.init !== "function") {
+        return Promise.reject(new TypeError("expected module with init() method in loadModule"));
+    }
+    return ext.init(this);
 }
 
 FIDOServer.prototype.shutdown = function() {
@@ -89,10 +94,10 @@ FIDOServer.prototype.shutdown = function() {
     }.bind(this));
 };
 
-FIDOServer.prototype.getAttestationChallenge = function(userId, userInfo) {
-    console.log ("blah");
+FIDOServer.prototype.getAttestationChallenge = function(userId) {
+    console.log("blah");
     return new Promise(function(resolve, reject) {
-        console.log ("getAttestationChallenge");
+        console.log("getAttestationChallenge");
         // validate response
         if (typeof userId !== "string") {
             reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
@@ -103,13 +108,17 @@ FIDOServer.prototype.getAttestationChallenge = function(userId, userInfo) {
         ret.blacklist = this.blacklist;
         // TODO: ret.credentialExtensions = [];
         ret.cryptoParameters = [];
-        ret.attestationChallenge = crypto.randomBytes(256).toString("hex");
+        ret.attestationChallenge = crypto.randomBytes(this.attestationSize).toString("hex");
+        ret.timeout = this.attestationTimeout;
 
-        // TODO: is this a bad idea?
-        console.log ("creating user");
-        this.account.findOrCreateUser(userId, userInfo)
+        console.log("find user:", userId);
+        // TODO: I think that this could be optimized by skipping the "getUserById" call
+        this.account.getUserById(userId)
             .then(function(user) {
-                console.log("created user:", user);
+                console.log("found user:", user);
+                if (user === undefined) {
+                    reject(new Error("User not found"));
+                }
 
                 // lookup user and save challenge for future reference
                 return this.account.updateUserAttestation(userId, ret.attestationChallenge);
@@ -119,9 +128,9 @@ FIDOServer.prototype.getAttestationChallenge = function(userId, userInfo) {
                 return resolve(ret);
             }.bind(this))
             .catch(function(err) {
-                console.log ("Error in getAttestationChallenge");
-                console.log (err);
-                reject (err);
+                console.log("Error in getAttestationChallenge");
+                console.log(err);
+                reject(err);
             }.bind(this));
     }.bind(this));
 };
@@ -151,22 +160,28 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
         }
 
         // TODO: validate public key based on key type
+        // TODO: verify that publicKey.alg is an algorithm type supported by server
 
-        // TODO: handle attestations
+        // TODO: validate attestations
         console.log("Attestation:", res.attestation);
-        if (typeof res.attestation !== null) {
+        if (res.attestation !== null) {
             reject(new TypeError("makeCredentialResponse: attestations not currently handled"));
         }
 
         // save key and credential with account information
         this.account.getUserById(userId)
             .then(function(user) {
-                console.log("user");
-                console.log("First name:", user.firstName);
-                console.log("Last name:", user.lastName);
-                console.log("User ID:", user.id);
-                console.log("User GUID:", user.guid);
-                resolve(null);
+                // TODO:
+                // - make sure attestation matches
+                // - lastAttestationUpdate must be somewhat recent (per some definable policy)
+                // -- timeout for lastAttestationUpdate may be tied to the timeout parameter of makeCredential
+                // - save credential
+                // TODO: riskengine.evaluate
+                return this.account.createCredential(userId, res);
+            }.bind(this))
+            .then(function(cred) {
+                console.log("created credential:", cred);
+                resolve(cred);
             })
             .catch(function(err) {
                 console.log("makeCredentialResponse error finding user");
@@ -178,25 +193,90 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
 
 FIDOServer.prototype.getAssertionChallenge = function(userId) {
     return new Promise(function(resolve, reject) {
-        var ret = {};
-        // ret.sessionId = 
-        // ret.assertionChallenge = 
-        // ret.whitelist =
-        // ret.assertionExtensions =
+        console.log("!!!! getAssertionChallenge");
+        // validate response
+        if (typeof userId !== "string") {
+            reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
+        }
 
-        resolve(ret);
+        var ret = {};
+        // TODO: ret.assertionExtensions = [];
+        ret.assertionChallenge = crypto.randomBytes(this.attestationSize).toString("hex");
+        ret.timeout = this.assertionTimeout;
+        // lookup credentials for whitelist
+        console.log("Getting user");
+        this.account.getUserById(userId)
+            .then(function(user) {
+                console.log("getAssertionChallenge user:", user);
+                ret.whitelist = _.map(user.credentials, function(o) {
+                    return _.pick(o, ["type", "id"]);
+                });
+                resolve(ret);
+            })
+            .catch(function(err) {
+                reject(err);
+            });
+
     }.bind(this));
 };
 
 FIDOServer.prototype.getAssertionResponse = function(userId, res) {
     return new Promise(function(resolve, reject) {
-        console.log(res);
-        console.log(ctx);
-        // res.credential = 
-        // res.clientData =
-        // res.authenticatorData =
-        // res.signature = 
+        console.log ("getAssertionResponse");
+        // validate response
+        if (typeof userId !== "string") {
+            reject(new TypeError("getAssertionResponse: expected userId to be a string"));
+        }
 
-        resolve(null);
+        if (typeof res !== "object") {
+            reject(new TypeError("getAssertionResponse: expected response to be an object"));
+        }
+
+        if (typeof res.credential !== "object" ||
+            typeof res.credential.type !== "string" ||
+            typeof res.credential.id !== "string") {
+            reject(new TypeError("getAssertionResponse: got an unexpected credential format"));
+        }
+
+        if (typeof res.clientData !== "string") {
+            reject(new TypeError("getAssertionResponse: got an unexpected clientData format"));
+        }
+
+        // TODO: clientData must contain challenge, facet, hashAlg
+
+        if (typeof res.authenticatorData !== "string") {
+            reject(new TypeError("getAssertionResponse: got an unexpected authenticatorData format"));
+        }
+
+        if (typeof res.signature !== "string") {
+            reject(new TypeError("getAssertionResponse: got an unexpected signature format"));
+        }
+
+        console.log (res);
+        console.log("Getting user");
+        this.account.getUserById(userId)
+            .then(function(user) {
+                console.log("getAssertionChallenge user:", user);
+                console.log (user.attestation);
+                console.log (user.lastAttestationUpdate);
+                // TODO: if now() > user.lastAttestationUpdate + this.assertionTimeout, reject()
+                // TODO: if res.attestation !== user.attestation, reject()
+                // TODO: hash data & verify signature
+                // publicKey.alg = RSA256, ES256, PS256, ED256
+                // crypto.createVerify('RSA-SHA256');
+                // jwkToPem(); 
+                // TODO: verify tokenBinding, if it exists
+                // TODO: process extensions
+                // TODO: riskengine.evaluate
+                var ret = {
+                    userId: userId,
+                    credential: res.credential,
+                    valid: true
+                };
+                resolve (ret);
+            })
+            .catch(function(err) {
+                reject(err);
+            });
     }.bind(this));
 };

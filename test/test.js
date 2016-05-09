@@ -21,33 +21,94 @@ describe.only("basic tests", function(done) {
 		});
 	});
 
-	it.only("gets getAttestationChallenge", function(done) {
+	it.skip("gets getAttestationChallenge", function(done) {
 		assert.equal(server.rpid, "example.com");
-		console.log ("doing getAttestationChallenge");
-		return server.getAttestationChallenge(helpers.userId).then(function(info) {
-			console.log ("getAttestationChallenge");
-			assert.isDefined(info);
-			assert.isDefined(info.attestationChallenge);
-			assert.lengthOf(info.attestationChallenge, 512);
-			done();
-		});
+		console.log("doing getAttestationChallenge");
+		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
+			.then(function(user) {
+				console.log("created user:", user);
+				return server.getAttestationChallenge(helpers.userId);
+			})
+			.then(function(info) {
+				console.log("getAttestationChallenge");
+				assert.isDefined(info);
+				assert.isDefined(info.attestationChallenge);
+				assert.lengthOf(info.attestationChallenge, 512);
+				done();
+			}.bind(this));
 	});
 
 	it.skip("get makeCredentialResponse", function() {
-		return server.makeCredentialResponse(helpers.userId, helpers.validMakeCredential).then(function(res) {});
+		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
+			.then(function(user) {
+				console.log("created user:", user);
+				return server.getAttestationChallenge(helpers.userId);
+			})
+			.then(function(info) {
+				console.log("getAttestationChallenge done");
+				return server.makeCredentialResponse(helpers.userId, helpers.validMakeCredential);
+			})
+			.then(function(res) {
+				console.log("makeCredentialResponse done");
+				console.log(res);
+				return null;
+			});
 	});
 
-	it.skip("get getAttestationChallenge", function(done) {
-		return server.getAttestationChallenge(helpers.userId).then(function(res) {
-			done();
-		});
+	it.skip("get getAssertionChallenge", function() {
+		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
+			.then(function(user) {
+				console.log("created user:", user);
+				return server.getAttestationChallenge(helpers.userId);
+			})
+			.then(function(info) {
+				console.log("getAttestationChallenge done");
+				return server.makeCredentialResponse(helpers.userId, helpers.validMakeCredential);
+			})
+			.then(function(res) {
+				console.log("makeCredentialResponse done");
+				console.log(res);
+				console.log("!!! DOING OUR BIG THING");
+				return server.getAssertionChallenge(helpers.userId);
+			})
+			.then(function(res) {
+				console.log("Final assertion challenge:", res);
+				return res;
+			});
 	});
 
-	it.skip("get getAssertionResponse", function(done) {
-		return server.getAssertionResponse(helpers.userId, helpers.validGetAssertion).then(function(res) {
-			done();
-		});
+	it.only("get getAssertionResponse", function() {
+		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
+			.then(function(user) {
+				console.log("created user:", user);
+				return server.getAttestationChallenge(helpers.userId);
+			})
+			.then(function(info) {
+				console.log("getAttestationChallenge done");
+				return server.makeCredentialResponse(helpers.userId, helpers.validMakeCredential);
+			})
+			.then(function(res) {
+				console.log("makeCredentialResponse done");
+				console.log(res);
+				console.log("!!! DOING OUR BIG THING");
+				return server.getAssertionChallenge(helpers.userId);
+			})
+			.then(function(res) {
+				console.log("Final assertion challenge:", res);
+				return server.getAssertionResponse(helpers.userId, helpers.validGetAssertion);
+			})
+			.then(function(assn) {
+				console.log("assertion:", assn);
+				return assn;
+			});
 	});
+
+	it("getAttestationChallenge user not found");
+	it("makeCredentialResponse user not found");
+	it("getAssertionChallenge user not found");
+	it("getAssertionResponse user not found");
+	it("getAssertionResponse bad challenge");
+	it("makeCredentialResponse bad challenge");
 });
 
 describe("logging tests", function() {
@@ -69,7 +130,7 @@ describe("account management", function() {
 		return new FIDOServer().init().then(function(s) {
 			console.log(s.account.name);
 			// s.account.listUsers().then(function(users) {});
-			s.account.findOrCreateUser("adam@fidoalliance.org", {
+			s.account.createUser("adam@fidoalliance.org", {
 				firstName: "Adam",
 				lastName: "Powers"
 			}).then(function(createdUser) {
