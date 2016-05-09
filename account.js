@@ -33,7 +33,8 @@ ServerAccount.prototype.init = function(server) {
 					type: "string",
 					primaryKey: true,
 					unique: true,
-					required: true
+					required: true,
+					index: true
 				},
 				guid: {
 					type: "text",
@@ -67,14 +68,20 @@ ServerAccount.prototype.init = function(server) {
 			identity: "credential",
 			connection: "default",
 			attributes: {
-				type: "string",
+				type: {
+					type: "string",
+					required: true
+				},
 				id: {
-					type: "integer",
-					autoIncrement: true,
+					type: "string",
 					unique: true,
 					primaryKey: true,
 					required: true,
 					index: true
+				},
+				publicKey: {
+					type: "json",
+					required: true
 				},
 
 				// Add a reference to User
@@ -188,8 +195,26 @@ ServerAccount.prototype.listCredentials = function() {
 
 };
 
-ServerAccount.prototype.createCredential = function() {
+ServerAccount.prototype.createCredential = function(userId, credential) {
+	console.log ("creating credential:", credential);
+	if (typeof userId !== "string") {
+		return Promise.reject(new TypeError("createCredential: expected id to be string"));
+	}
 
+	// assuming that more extensive checking has done before we got here, and by the waterline schema
+	if (typeof credential !== "object") {
+		reject(new TypeError("makeCredentialResponse: expected response to be a object"));
+	}
+
+	var cred = {
+		type: credential.credential.type,
+		id: credential.credential.id,
+		publicKey: credential.publicKey,
+		// TODO: attestation?
+		user: userId
+	};
+
+	return this.credential.create(cred);
 };
 
 ServerAccount.prototype.getCredential = function() {
