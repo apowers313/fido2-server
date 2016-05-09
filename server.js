@@ -4,6 +4,9 @@ var async = require("async");
 
 module.exports = FIDOServer;
 
+/**
+ * Constructor for FIDO Server
+ */
 function FIDOServer(opt) {
     opt = opt || {};
 
@@ -40,6 +43,9 @@ function FIDOServer(opt) {
     _.extend(this, opt);
 }
 
+/**
+ * Initializes FIDO Server and all submodules
+ */
 FIDOServer.prototype.init = function() {
     console.log("Initializing ...");
     return new Promise(function(resolve, reject) {
@@ -60,6 +66,9 @@ FIDOServer.prototype.init = function() {
     }.bind(this));
 };
 
+/*
+ * Helper function for loading modules
+ */
 function loadModule(ext) {
     var module, Module, ret;
     if (typeof ext === "string") {
@@ -77,6 +86,9 @@ function loadModule(ext) {
     return ext.init(this);
 }
 
+/**
+ * Terminates FIDO Server and all submodules
+ */
 FIDOServer.prototype.shutdown = function() {
     return new Promise(function(resolve, reject) {
         console.log("FIDO Server shutting down ...");
@@ -94,6 +106,9 @@ FIDOServer.prototype.shutdown = function() {
     }.bind(this));
 };
 
+/**
+ * Gets a challenge and any other parameters for the makeCredential call
+ */
 FIDOServer.prototype.getAttestationChallenge = function(userId) {
     console.log("blah");
     return new Promise(function(resolve, reject) {
@@ -135,6 +150,9 @@ FIDOServer.prototype.getAttestationChallenge = function(userId) {
     }.bind(this));
 };
 
+/**
+ * Processes the makeCredential response
+ */
 FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
     return new Promise(function(resolve, reject) {
         console.log(userId);
@@ -191,6 +209,9 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
     }.bind(this));
 };
 
+/**
+ * Creates an assertion challenge and any other parameters for the getAssertion call
+ */
 FIDOServer.prototype.getAssertionChallenge = function(userId) {
     return new Promise(function(resolve, reject) {
         console.log("!!!! getAssertionChallenge");
@@ -220,6 +241,9 @@ FIDOServer.prototype.getAssertionChallenge = function(userId) {
     }.bind(this));
 };
 
+/**
+ * Processes a getAssertion response
+ */
 FIDOServer.prototype.getAssertionResponse = function(userId, res) {
     return new Promise(function(resolve, reject) {
         console.log ("getAssertionResponse");

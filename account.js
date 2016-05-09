@@ -5,6 +5,9 @@ var uuid = require("node-uuid");
 
 module.exports = ServerAccount;
 
+/**
+ * CRUD operations for accounts and credentials, based on Waterline
+ */
 function ServerAccount(opts, cb) {}
 
 ServerAccount.prototype.init = function(server) {

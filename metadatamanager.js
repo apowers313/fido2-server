@@ -2,6 +2,11 @@ module.exports = MdsClient;
 
 // TODO: handle side-loading certs / metadata
 
+/**
+ * Manages loading metadata and attestation certs for authenticators 
+ * through the Metadata Service (MDS) and through JSON statments stored 
+ * in a watch folder.
+ */
 function MdsClient(opts) {
 
 }

@@ -5,6 +5,9 @@ var bunyan = require("bunyan");
 
 module.exports = ServerAudit;
 
+/**
+ * Auditing constructor
+ */
 function ServerAudit(opt) {
     var levels = {
 
@@ -21,6 +24,9 @@ function ServerAudit(opt) {
     this.outputFile = opt.outputFile;
 }
 
+/**
+ * Initialize auditing
+ */
 ServerAudit.prototype.init = function(server) {
     return new Promise(function(resolve, reject) {
         this.logger = bunyan.createLogger({
@@ -46,49 +52,83 @@ ServerAudit.prototype.init = function(server) {
     }.bind(this));
 };
 
-ServerAudit.prototype.fatal = function() {
-    callWithArgs(this.logger, "error", arguments);
-    callWithArgs(this, "alert", arguments);
-};
-
-ServerAudit.prototype.error = function() {
-    callWithArgs(this.logger, "error", arguments);
-};
-
-ServerAudit.prototype.warn = function() {
-    callWithArgs(this.logger, "warn", arguments);
-};
-
-ServerAudit.prototype.info = function() {
-    callWithArgs(this.logger, "info", arguments);
-};
-
-ServerAudit.prototype.debug = function() {
-    callWithArgs(this.logger, "debug", arguments);
-};
-
-ServerAudit.prototype.trace = function() {
-    callWithArgs(this.logger, "trace", arguments);
-};
-
-ServerAudit.prototype.alert = function() {
-    console.log("!!! ALERT");
-    // TODO: SNMP trap? email? SMS?
-};
-
-ServerAudit.prototype.flush = function() {
-
-};
-
+/**
+ * Terminate auditing
+ */
 ServerAudit.prototype.shutdown = function() {
     this.logger.info("Audit log shutting down");
     return Promise.resolve(null);
 };
 
+/**
+ * Log a fatal error that will result in this program terminating
+ */
+ServerAudit.prototype.fatal = function() {
+    callWithArgs(this.logger, "error", arguments);
+    callWithArgs(this, "alert", arguments);
+};
+
+/**
+ * Log a non-fatal error, such as permissions errors
+ */
+ServerAudit.prototype.error = function() {
+    callWithArgs(this.logger, "error", arguments);
+};
+
+/**
+ * Log a warning
+ */
+ServerAudit.prototype.warn = function() {
+    callWithArgs(this.logger, "warn", arguments);
+};
+
+/**
+ * Log an informational / status message
+ */
+ServerAudit.prototype.info = function() {
+    callWithArgs(this.logger, "info", arguments);
+};
+
+/**
+ * Log a debug message
+ */
+ServerAudit.prototype.debug = function() {
+    callWithArgs(this.logger, "debug", arguments);
+};
+
+/**
+ * Log a trace message
+ */
+ServerAudit.prototype.trace = function() {
+    callWithArgs(this.logger, "trace", arguments);
+};
+
+/**
+ * Throw an alert. This may be overridden to do something more interesting, such as
+ * Trigging a SNMP trap, sending an email, sending an SMS, etc.
+ */
+ServerAudit.prototype.alert = function() {
+    console.log("!!! ALERT");
+    // TODO: SNMP trap? email? SMS?
+};
+
+/**
+ * Flush any pending messages
+ */
+ServerAudit.prototype.flush = function() {
+
+};
+
+/**
+ * Get a list of all log messages
+ */
 ServerAudit.prototype.list = function() {
     return [];
 };
 
+/*
+ * Helper function for calling functions with variable arguments
+ */ 
 function callWithArgs(ctx, fnName, args) {
     var fn = ctx[fnName];
     fn.apply(ctx, Array.prototype.slice.call(args));
