@@ -29,7 +29,7 @@ function ServerAudit(opt) {
  */
 ServerAudit.prototype.init = function(server) {
     return new Promise(function(resolve, reject) {
-        this.logger = bunyan.createLogger({
+        this.logger = this.bunyan = bunyan.createLogger({
             name: this.name,
             level: this.level,
             streams: [{

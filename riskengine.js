@@ -1,10 +1,10 @@
 module.exports = RiskEngine;
 
-function RiskEngine(opts) {
+function RiskEngine(opt) {
 
 } 
 
-RiskEngine.prototype.init = function() {
+RiskEngine.prototype.init = function(server) {
 	return Promise.resolve (null);
 };
 

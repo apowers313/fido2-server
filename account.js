@@ -5,10 +5,12 @@ var uuid = require("node-uuid");
 
 module.exports = ServerAccount;
 
+// TODO: change name to "IdentityStore"?
+
 /**
  * CRUD operations for accounts and credentials, based on Waterline
  */
-function ServerAccount(opts, cb) {}
+function ServerAccount(opt) {}
 
 ServerAccount.prototype.init = function(server) {
 	return new Promise(function(resolve, reject) {

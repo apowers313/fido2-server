@@ -7,11 +7,11 @@ module.exports = MdsClient;
  * through the Metadata Service (MDS) and through JSON statments stored 
  * in a watch folder.
  */
-function MdsClient(opts) {
+function MdsClient(opt) {
 
 }
 
-MdsClient.prototype.init = function() {
+MdsClient.prototype.init = function(server) {
 	return Promise.resolve (null);
 };
 
@@ -19,8 +19,8 @@ MdsClient.prototype.shutdown = function() {
 	return Promise.resolve (null);
 };
 
-MdsClient.prototype.update = function(cb) {
-	cb(null, null);
+MdsClient.prototype.update = function() {
+	return Promise.resolve (null);
 };
 
 MdsClient.prototype.list = function() {
