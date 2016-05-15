@@ -1,8 +1,17 @@
 var _ = require("lodash");
 var crypto = require("crypto");
 var async = require("async");
+var conf = require("rc");
 
 module.exports = FIDOServer;
+
+function FIDOServerError(message, type) {
+    Error.captureStackTrace(this, this.constructor);
+    this.name = this.constructor.name;
+    this.message = message;
+    this.extra = type;
+}
+require('util').inherits(FIDOServerError, Error);
 
 /**
  * Constructor for FIDO Server
@@ -17,6 +26,11 @@ function FIDOServer(opt) {
         attestationSize: 32,
         attestationTimeout: 300, // 5 minutes
         assertionTimeout: 300, // 5 minutes
+        version: {
+            major: 0,
+            minor: 8,
+            patch: 0
+        },
         modules: {
             audit: "./audit.js",
             comm: "./comm.js",
@@ -24,11 +38,17 @@ function FIDOServer(opt) {
             metadataManager: "./metadatamanager.js",
             extension: "./extension.js",
             account: "./account.js",
+        },
+        moduleConfig: {
+            // audit: {},
+            // comm: {},
+            // ...
         }
     };
-    _.defaultsDeep(opt, defaults);
 
-    // TODO: use 'rc' for options
+    // use 'rc' for reading options out of config files
+    // var conf = require("rc")("fidoserver", defaults);
+    var conf = defaults;
     // opts:
     // - server rpid
     // - server SSL cert
@@ -40,7 +60,11 @@ function FIDOServer(opt) {
 
     // TODO: validate options
 
+    _.defaultsDeep(opt, conf);
+    // TODO: copying options to the base object is getting messy, need to reorganize
     _.extend(this, opt);
+
+    this.FIDOServerError = FIDOServerError;
 }
 
 /**
@@ -48,6 +72,7 @@ function FIDOServer(opt) {
  */
 FIDOServer.prototype.init = function() {
     console.log("Initializing ...");
+    var loadModule = _loadModule.bind(this);
     return new Promise(function(resolve, reject) {
         var modules = _.mapValues(this.modules, loadModule);
         var moduleNames = _.keys(modules);
@@ -69,12 +94,12 @@ FIDOServer.prototype.init = function() {
 /*
  * Helper function for loading modules
  */
-function loadModule(ext) {
+function _loadModule(ext, name) {
     var module, Module, ret;
     if (typeof ext === "string") {
-        console.log("Loading " + ext + " ...");
+        console.log("Loading " + name + " (" + ext + ") ...");
         Module = require(ext);
-        module = new Module();
+        module = new Module(this.moduleConfig[name]);
         // return a promise
         return module.init(this);
     }
@@ -83,6 +108,8 @@ function loadModule(ext) {
         typeof ext.init !== "function") {
         return Promise.reject(new TypeError("expected module with init() method in loadModule"));
     }
+
+    console.log("Loading " + name + " ...");
     return ext.init(this);
 }
 
@@ -132,7 +159,7 @@ FIDOServer.prototype.getAttestationChallenge = function(userId) {
             .then(function(user) {
                 console.log("found user:", user);
                 if (user === undefined) {
-                    reject(new Error("User not found"));
+                    reject(new FIDOServerError ("User not found", "UserNotFound"));
                 }
 
                 // lookup user and save challenge for future reference
@@ -189,6 +216,10 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
         // save key and credential with account information
         this.account.getUserById(userId)
             .then(function(user) {
+                console.log("makeCredentialResponse User:", user);
+                if (user === undefined) {
+                    return reject(new FIDOServerError("User not found", "UserNotFound"));
+                }
                 // TODO:
                 // - make sure attestation matches
                 // - lastAttestationUpdate must be somewhat recent (per some definable policy)
@@ -198,13 +229,17 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
                 return this.account.createCredential(userId, res);
             }.bind(this))
             .then(function(cred) {
+                console.log("makeCredentialResponse Cred:", cred);
+                if (cred === undefined) {
+                    return reject(new Error("couldn't create credential"));
+                }
                 console.log("created credential:", cred);
                 resolve(cred);
-            })
-            .catch(function(err) {
-                console.log("makeCredentialResponse error finding user");
-                reject(err);
             });
+        // .catch(function(err) {
+        //     console.log("makeCredentialResponse error finding user");
+        //     reject(err);
+        // });
 
     }.bind(this));
 };
@@ -246,7 +281,7 @@ FIDOServer.prototype.getAssertionChallenge = function(userId) {
  */
 FIDOServer.prototype.getAssertionResponse = function(userId, res) {
     return new Promise(function(resolve, reject) {
-        console.log ("getAssertionResponse");
+        console.log("getAssertionResponse");
         // validate response
         if (typeof userId !== "string") {
             reject(new TypeError("getAssertionResponse: expected userId to be a string"));
@@ -276,13 +311,13 @@ FIDOServer.prototype.getAssertionResponse = function(userId, res) {
             reject(new TypeError("getAssertionResponse: got an unexpected signature format"));
         }
 
-        console.log (res);
+        console.log(res);
         console.log("Getting user");
         this.account.getUserById(userId)
             .then(function(user) {
                 console.log("getAssertionChallenge user:", user);
-                console.log (user.attestation);
-                console.log (user.lastAttestationUpdate);
+                console.log(user.attestation);
+                console.log(user.lastAttestationUpdate);
                 // TODO: if now() > user.lastAttestationUpdate + this.assertionTimeout, reject()
                 // TODO: if res.attestation !== user.attestation, reject()
                 // TODO: hash data & verify signature
@@ -297,7 +332,7 @@ FIDOServer.prototype.getAssertionResponse = function(userId, res) {
                     credential: res.credential,
                     valid: true
                 };
-                resolve (ret);
+                resolve(ret);
             })
             .catch(function(err) {
                 reject(err);

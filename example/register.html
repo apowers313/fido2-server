@@ -6,7 +6,7 @@
 </head>
 
 <body>
-    <script src="/ms-webauth-polyfill.js"></script>
+    <!-- <script src="/ms-webauth-polyfill.js"></script> -->
     <script type="text/javascript">
     function fidoRegister() {
         console.log("fidoRegister");
@@ -24,23 +24,36 @@
             algorithm: 'RSASSA-PKCS1-v1_5'
         }];
 
-
         console.log("doing makeCredential");
         window.webauthn.makeCredential(accountInfo, cryptoParameters)
             .then(function(cred) {
-                console.log("makeCredential resolved");
-                console.log("Got credential:");
+                var fidoServerRegisterEndpoint = "http://localhost:61904/register";
+                // var cred = {
+                //     credential: {
+                //         type: 'ScopedCred',
+                //         id: '8DD7414D-EE43-474C-A05D-FDDB828B663B'
+                //     },
+                //     publicKey: {
+                //         kty: 'RSA',
+                //         alg: 'RS256',
+                //         ext: false,
+                //         n: 'lMR4XoxRiY5kptgHhh1XLKnezHC2EWPIImlHS-iUMSKVH32WWUKfEoY5Al_exPtcVuUfcNGtMoysAN65PZzcMKXaQ-2a8AebKwe8qQGBc4yY0EkP99Sgb80rAf1S7s-JRNVtNTRb4qrXVCMxZHu3ubjsdeybMI-fFKzYg9IV6DPotJyx1OpNSdibSwWKDTc5YzGfoOG3vA-1ae9oFOh5ZolhHnr5UkodFKUaxOOHfPrAB0MVT5Y5Stvo_Z_1qFDOLyOWdhxxzl2at3K9tyQC8kgJCNKYsq7-EFzvA9Q90PC6SxGATQoICKn2vCNMBqVHLlTydBmP7-8MoMxefM277w',
+                //         e: 'AQAB'
+                //     },
+                //     attestation: null
+                // };
+                console.log("makeCredential done, returned:");
                 console.log(cred);
+                cred.userId = accountInfo.userDisplayName;
 
                 // send registration to server
                 var xhr = new XMLHttpRequest();
-                xhr.open("POST", "/register", true);
+                console.log("sending request to:", fidoServerRegisterEndpoint);
+                xhr.open("POST", fidoServerRegisterEndpoint, true);
                 xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-                // xhr.send(JSON.stringify(req));
                 xhr.send(JSON.stringify(cred));
                 xhr.onload = function() {
-                    console.log("onload");
-                    console.log("Got:");
+                    console.log("XMLHttpRequest.onload got response:");
                     console.log(xhr.response);
                     // TODO: check response to make sure it's okay
                     var elem = document.getElementById("success");
