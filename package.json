@@ -19,6 +19,13 @@
   ],
   "author": "Adam Powers",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apowers313/fido2-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/apowers313/fido2-server/issues"
+  },
   "devDependencies": {
     "body-parser": "^1.15.0",
     "chai": "^3.5.0",
@@ -31,6 +38,8 @@
     "bunyan": "^1.8.1",
     "lodash": "^4.11.2",
     "node-uuid": "^1.4.7",
+    "rc": "^1.1.6",
+    "restify": "^4.0.4",
     "sails-disk": "^0.10.9",
     "waterline": "^0.12.1"
   }
