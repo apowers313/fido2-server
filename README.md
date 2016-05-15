@@ -1,5 +1,5 @@
 # fido2-server
-A FIDO 2.0 / W3C WebAuthn server
+A [FIDO 2.0](https://fidoalliance.org) / [W3C WebAuthn](http://w3c.github.io/webauthn/) server
 
 <!-- START doctoc -->
 <!-- END doctoc -->
