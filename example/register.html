@@ -8,12 +8,67 @@
 <body>
     <!-- <script src="/ms-webauth-polyfill.js"></script> -->
     <script type="text/javascript">
+    function getChallenge() {
+        return new Promise(function(resolve, reject) {
+            var fidoAttestationChallengeEndpoint = "http://localhost:61904/attestationChallenge";
+            var challengeReq = {
+                userId: document.getElementById("userDisplayName").value
+            };
+
+            // get challenge from server
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", fidoAttestationChallengeEndpoint, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+            // xhr.send(JSON.stringify(req));
+            xhr.send(JSON.stringify(challengeReq));
+            xhr.onload = function() {
+                console.log("XMLHttpRequest.onload got response for challenge:");
+                console.log(xhr.response);
+                if (xhr.status != 200) {
+                    console.log("Status:", xhr.status);
+                    var errorMsg = JSON.parse(xhr.response).error;
+                    return reject(xhr.status + ": " + errorMsg);
+                } else {
+                    console.log("Success receiving challenge");
+                    return resolve(xhr.response);
+                }
+            };
+        });
+    }
+
+    function sendResponse(cred) {
+        return new Promise(function(resolve, reject) {
+            var fidoServerRegisterEndpoint = "http://localhost:61904/register";
+
+            // send registration to server
+            var xhr = new XMLHttpRequest();
+            console.log("sending request to:", fidoServerRegisterEndpoint);
+            xhr.open("POST", fidoServerRegisterEndpoint, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+            xhr.send(JSON.stringify(cred));
+            xhr.onload = function() {
+                if (xhr.status !== "200") {
+                    console.log(xhr.status);
+                }
+                console.log("XMLHttpRequest.onload got response:");
+                console.log(xhr.response);
+                // TODO: check response to make sure it's okay
+                var elem = document.getElementById("success");
+                elem.innerHTML = "Success! Redirecting to login page...";
+                setTimeout(function() {
+                    window.location = "/login.html";
+                }, 3000);
+            };
+        });
+    }
+
     function fidoRegister() {
         console.log("fidoRegister");
 
         // stop default submit event
         event.preventDefault();
 
+        // TODO: get registration request from server
         var accountInfo = {
             rpDisplayName: 'Facebook', // human readable name of service
             userDisplayName: document.getElementById("userDisplayName").value // name of person registering
@@ -24,55 +79,46 @@
             algorithm: 'RSASSA-PKCS1-v1_5'
         }];
 
-        console.log("doing makeCredential");
-        window.webauthn.makeCredential(accountInfo, cryptoParameters)
-            .then(function(cred) {
-                var fidoServerRegisterEndpoint = "http://localhost:61904/register";
-                // var cred = {
-                //     credential: {
-                //         type: 'ScopedCred',
-                //         id: '8DD7414D-EE43-474C-A05D-FDDB828B663B'
-                //     },
-                //     publicKey: {
-                //         kty: 'RSA',
-                //         alg: 'RS256',
-                //         ext: false,
-                //         n: 'lMR4XoxRiY5kptgHhh1XLKnezHC2EWPIImlHS-iUMSKVH32WWUKfEoY5Al_exPtcVuUfcNGtMoysAN65PZzcMKXaQ-2a8AebKwe8qQGBc4yY0EkP99Sgb80rAf1S7s-JRNVtNTRb4qrXVCMxZHu3ubjsdeybMI-fFKzYg9IV6DPotJyx1OpNSdibSwWKDTc5YzGfoOG3vA-1ae9oFOh5ZolhHnr5UkodFKUaxOOHfPrAB0MVT5Y5Stvo_Z_1qFDOLyOWdhxxzl2at3K9tyQC8kgJCNKYsq7-EFzvA9Q90PC6SxGATQoICKn2vCNMBqVHLlTydBmP7-8MoMxefM277w',
-                //         e: 'AQAB'
-                //     },
-                //     attestation: null
-                // };
+        console.log("doing get challenge");
+        getChallenge()
+            .then(function(challenge) {
+                console.log("Doing makeCredential");
+                // return window.webauthn.makeCredential(accountInfo, cryptoParameters);
+
+                // dummy credential
+                var cred = {
+                    credential: {
+                        type: 'ScopedCred',
+                        id: '8DD7414D-EE43-474C-A05D-FDDB828B663B'
+                    },
+                    publicKey: {
+                        kty: 'RSA',
+                        alg: 'RS256',
+                        ext: false,
+                        n: 'lMR4XoxRiY5kptgHhh1XLKnezHC2EWPIImlHS-iUMSKVH32WWUKfEoY5Al_exPtcVuUfcNGtMoysAN65PZzcMKXaQ-2a8AebKwe8qQGBc4yY0EkP99Sgb80rAf1S7s-JRNVtNTRb4qrXVCMxZHu3ubjsdeybMI-fFKzYg9IV6DPotJyx1OpNSdibSwWKDTc5YzGfoOG3vA-1ae9oFOh5ZolhHnr5UkodFKUaxOOHfPrAB0MVT5Y5Stvo_Z_1qFDOLyOWdhxxzl2at3K9tyQC8kgJCNKYsq7-EFzvA9Q90PC6SxGATQoICKn2vCNMBqVHLlTydBmP7-8MoMxefM277w',
+                        e: 'AQAB'
+                    },
+                    attestation: null
+                };
                 console.log("makeCredential done, returned:");
                 console.log(cred);
                 cred.userId = accountInfo.userDisplayName;
-
-                // send registration to server
-                var xhr = new XMLHttpRequest();
-                console.log("sending request to:", fidoServerRegisterEndpoint);
-                xhr.open("POST", fidoServerRegisterEndpoint, true);
-                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-                xhr.send(JSON.stringify(cred));
-                xhr.onload = function() {
-                    console.log("XMLHttpRequest.onload got response:");
-                    console.log(xhr.response);
-                    // TODO: check response to make sure it's okay
-                    var elem = document.getElementById("success");
-                    elem.innerHTML = "Success! Redirecting to login page...";
-                    setTimeout(function() {
-                        window.location = "/login.html";
-                    }, 3000);
-                };
+                return cred;
+            })
+            .then(function(cred) {
+                console.log("Doing sendResponse");
+                return sendResponse(cred);
             })
             .catch(function(err) {
                 console.log("makeCredential error:", err);
-                throw (err);
+                throw err;
             });
     }
     </script>
     <h1>Register</h1> Register for an account:
     <form onsubmit="fidoRegister()">
         Username:&nbsp;
-        <input id="userDisplayName" type="text" value="John P. Smith"></input>
+        <input id="userDisplayName" type="text" value="john@paypal.com"></input>
         <br>
         <input type="submit" value="FIDO Register">
     </form>

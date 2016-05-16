@@ -49,8 +49,8 @@ ServerAccount.prototype.init = function(server) {
 					}
 				},
 				imageUrl: "string",
-				attestation: "string",
-				lastAttestationUpdate: "datetime",
+				challenge: "string",
+				lastChallengeUpdate: "datetime",
 				otherInfo: "json",
 
 				// Add a reference to Pets
@@ -61,8 +61,8 @@ ServerAccount.prototype.init = function(server) {
 			},
 			beforeUpdate: function(values, next) {
 				console.log("updating:", values);
-				if (values.attestation !== undefined) {
-					values.lastAttestationUpdate = new Date();
+				if (values.challenge !== undefined) {
+					values.lastChallengeUpdate = new Date();
 				}
 				console.log("updating:", values);
 				next();
@@ -168,23 +168,22 @@ ServerAccount.prototype.getUserById = function(id) {
 		.populate("credentials");
 };
 
-ServerAccount.prototype.updateUserAttestation = function(id, attestation) {
+ServerAccount.prototype.updateUserChallenge = function(id, challenge) {
 	if (typeof id !== "string") {
-		return Promise.reject(new TypeError("updateUserAttestation expected id to be string"));
+		return Promise.reject(new TypeError("updateUserChallenge expected id to be string"));
 	}
 
-	console.log(attestation);
-	if (typeof attestation !== "string" ||
-		attestation.length < 8) {
-		return Promise.reject(new TypeError("updateUserAttestation expected attestation to be string at least 8 characters long"));
+	console.log(challenge);
+	if (typeof challenge !== "string" ||
+		challenge.length < 8) {
+		return Promise.reject(new TypeError("updateUserChallenge expected challenge to be string at least 8 bytes long"));
 	}
-
 
 	return this.user
 		.update({
 			id: id
 		}, {
-			attestation: attestation
+			challenge: challenge
 		});
 };
 
@@ -201,7 +200,7 @@ ServerAccount.prototype.listCredentials = function() {
 };
 
 ServerAccount.prototype.createCredential = function(userId, credential) {
-	console.log ("creating credential:", credential);
+	console.log("creating credential:", credential);
 	if (typeof userId !== "string") {
 		return Promise.reject(new TypeError("createCredential: expected id to be string"));
 	}

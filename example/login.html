@@ -8,6 +8,60 @@
 <body>
     <script src="/ms-webauth-polyfill.js"></script>
     <script type="text/javascript">
+    function getChallenge() {
+        return new Promise (function (resolve, reject) {
+            var fidoAssertionChallengeEndpoint = "http://localhost:61904/assertionChallenge";
+            var challengeReq = {
+                userId: document.getElementById("userDisplayName").value
+            };
+
+            // get challenge from server
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", fidoAssertionChallengeEndpoint, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+            // xhr.send(JSON.stringify(req));
+            xhr.send(JSON.stringify(challengeReq));
+            xhr.onload = function() {
+                console.log("XMLHttpRequest.onload got response for challenge:");
+                console.log(xhr.response);
+                if (xhr.status != 200) {
+                    console.log ("Status:", xhr.status);
+                    var errorMsg = JSON.parse (xhr.response).error;
+                    return reject (xhr.status + ": " + errorMsg);
+                }  
+                else {
+                    console.log ("Success receiving challenge");
+                    return resolve (xhr.response);
+                }
+            };
+        });
+    }
+
+    function sendResponse(assn) {
+        return new Promise (function (resolve, reject) {
+            var fidoServerLoginEndpoint = "http://localhost:61904/login";
+
+            // send login request to server
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", fidoServerLoginEndpoint, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+            // xhr.send(JSON.stringify(req));
+            xhr.send(JSON.stringify(assn));
+            xhr.onload = function() {
+                console.log("XMLHttpRequest.onload got response for login:");
+                console.log(xhr.response);
+                var elem = document.getElementById("success");
+                if (xhr.status != 200) {
+                    console.log ("Status:", xhr.status);
+                    var errorMsg = JSON.parse (xhr.response).error;
+                    elem.innerHTML = "Error logging in: " + errorMsg;
+                }  else {
+                    elem.innerHTML = "Successful login! Normally I'd send you to your homepage, but this is a fake website...";
+                }                        
+            };
+        });
+    }
+
     function fidoLogin() {
         console.log("fidoLogin");
 
@@ -21,26 +75,29 @@
         }];
 
         console.log("doing getAssertion");
-        webauthn.getAssertion(challenge, {}, whitelist, {})
-            .then(function(assn) {
-                console.log("getAssertion done");
-                console.log("Got assertion:");
-                console.log(assn);
+        getChallenge()
+            .then(function (challenge) {
+                console.log ("Doing getAssertino");
+                // return webauthn.getAssertion(challenge, {}, whitelist, {})
 
-                // send registration to server
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST", "/login", true);
-                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-                // xhr.send(JSON.stringify(req));
-                xhr.send(JSON.stringify(assn));
-                xhr.onload = function() {
-                    console.log("onload");
-                    console.log("Got:");
-                    console.log(xhr.response);
-                    // TODO: check response to make sure it's okay
-                    var elem = document.getElementById("success");
-                    elem.innerHTML = "Successful login! Normally I'd send you to your homepage, but this is a fake website...";
+                // dummy assertion
+                var assn = {
+                    credential: {
+                        type: 'ScopedCred',
+                        id: '8DD7414D-EE43-474C-A05D-FDDB828B663B'
+                    },
+                    clientData: 'ew0KCSJjaGFsbGVuZ2UiIDogImFiYzEyM2RlZjQ1NiINCn0A',
+                    authenticatorData: 'AQAAAAA',
+                    signature: 'g22nh1Ww-qZAysuizkugZGmEisax3dtoUNzIl2LWOSARzeZxm_-nQoHfKyo8b8_XnxXwuLlW8RXBLAN38D3V2PBugPRloVzE1gn4Vl7Ro124GqPyURNllvNkD3EAl64bHPK-EVIOmI8zk0QK_ZoqfAKY_RfMLNObSn47H_hdA-YZUGEkWtcyUgC65H9xfhFWOQdg-r_pHY5_TxgdSNR8itkBb2xZGKagFnGUtdmOSRROVwK9AalJwsJD1W4lF5_4Jfumsb1YJ6yQwrPhJuYNCCeVHXIahXDUKTdTtWQs0MTj7kGi1j-_lkNpl7rEnSV4wqw8K5SEcHM-mEBYX-fMDw'
                 };
+                console.log("getAssertion done, got:");
+                console.log(assn);
+                assn.userId = document.getElementById("userDisplayName").value;
+                return assn;
+            })
+            .then(function(assn) {
+                console.log ("Doing sendResponse");
+                return sendResponse (assn);
             })
             .catch(function(err) {
                 console.log("getAssertion error:", err);
@@ -51,7 +108,7 @@
     <h1>Login</h1> Login to your FIDO-enabled account:
     <form onsubmit="fidoLogin()">
         Username:&nbsp;
-        <input type="text"></input>
+        <input id="userDisplayName" type="text" value="john@paypal.com"></input>
         <br>
         <input type="submit" value="FIDO Login">
     </form>

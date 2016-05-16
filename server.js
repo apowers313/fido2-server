@@ -23,7 +23,7 @@ function FIDOServer(opt) {
         rpid: "example.com", // TLD + 1
         blacklist: [],
         cryptoParameterPrefs: [],
-        attestationSize: 32,
+        challengeSize: 32,
         attestationTimeout: 300, // 5 minutes
         assertionTimeout: 300, // 5 minutes
         version: {
@@ -137,7 +137,6 @@ FIDOServer.prototype.shutdown = function() {
  * Gets a challenge and any other parameters for the makeCredential call
  */
 FIDOServer.prototype.getAttestationChallenge = function(userId) {
-    console.log("blah");
     return new Promise(function(resolve, reject) {
         console.log("getAttestationChallenge");
         // validate response
@@ -145,13 +144,13 @@ FIDOServer.prototype.getAttestationChallenge = function(userId) {
             reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
         }
 
-        var ret = {};
+        var challenge = {};
         // TODO: ret.accountInformation = {};
-        ret.blacklist = this.blacklist;
+        challenge.blacklist = this.blacklist;
         // TODO: ret.credentialExtensions = [];
-        ret.cryptoParameters = [];
-        ret.attestationChallenge = crypto.randomBytes(this.attestationSize).toString("hex");
-        ret.timeout = this.attestationTimeout;
+        challenge.cryptoParameters = [];
+        challenge.attestationChallenge = crypto.randomBytes(this.challengeSize).toString("hex");
+        challenge.timeout = this.attestationTimeout;
 
         console.log("find user:", userId);
         // TODO: I think that this could be optimized by skipping the "getUserById" call
@@ -159,20 +158,20 @@ FIDOServer.prototype.getAttestationChallenge = function(userId) {
             .then(function(user) {
                 console.log("found user:", user);
                 if (user === undefined) {
-                    reject(new FIDOServerError ("User not found", "UserNotFound"));
+                    reject(new FIDOServerError("User not found", "UserNotFound"));
                 }
 
                 // lookup user and save challenge for future reference
-                return this.account.updateUserAttestation(userId, ret.attestationChallenge);
+                return this.account.updateUserChallenge(userId, challenge.attestationChallenge);
             }.bind(this))
             .then(function(user) {
                 console.log("updated user:", user);
-                return resolve(ret);
+                return resolve(challenge);
             }.bind(this))
             .catch(function(err) {
-                console.log("Error in getAttestationChallenge");
+                console.log("Error in updateUserChallenge");
                 console.log(err);
-                reject(err);
+                return reject(err);
             }.bind(this));
     }.bind(this));
 };
@@ -187,21 +186,21 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
 
         // validate response
         if (typeof userId !== "string") {
-            reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
+            return reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
         }
 
         if (typeof res !== "object") {
-            reject(new TypeError("makeCredentialResponse: expected response to be a object"));
+            return reject(new TypeError("makeCredentialResponse: expected response to be a object"));
         }
 
         if (typeof res.credential !== "object" ||
             typeof res.credential.type !== "string" ||
             typeof res.credential.id !== "string") {
-            reject(new TypeError("makeCredentialResponse: got an unexpected credential format"));
+            return reject(new TypeError("makeCredentialResponse: got an unexpected credential format"));
         }
 
         if (typeof res.publicKey !== "object") {
-            reject(new TypeError("makeCredentialResponse: got an unexpected publicKey format"));
+            return reject(new TypeError("makeCredentialResponse: got an unexpected publicKey format"));
         }
 
         // TODO: validate public key based on key type
@@ -210,7 +209,7 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
         // TODO: validate attestations
         console.log("Attestation:", res.attestation);
         if (res.attestation !== null) {
-            reject(new TypeError("makeCredentialResponse: attestations not currently handled"));
+            return reject(new TypeError("makeCredentialResponse: attestations not currently handled"));
         }
 
         // save key and credential with account information
@@ -235,11 +234,11 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
                 }
                 console.log("created credential:", cred);
                 resolve(cred);
+            })
+            .catch(function(err) {
+                console.log("makeCredentialResponse error:", err);
+                reject(err);
             });
-        // .catch(function(err) {
-        //     console.log("makeCredentialResponse error finding user");
-        //     reject(err);
-        // });
 
     }.bind(this));
 };
@@ -249,27 +248,34 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
  */
 FIDOServer.prototype.getAssertionChallenge = function(userId) {
     return new Promise(function(resolve, reject) {
-        console.log("!!!! getAssertionChallenge");
+        console.log("getAssertionChallenge");
         // validate response
         if (typeof userId !== "string") {
-            reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
+            return reject(new TypeError("makeCredentialResponse: expected userId to be a string"));
         }
 
         var ret = {};
         // TODO: ret.assertionExtensions = [];
-        ret.assertionChallenge = crypto.randomBytes(this.attestationSize).toString("hex");
+        ret.assertionChallenge = crypto.randomBytes(this.challengeSize).toString("hex");
         ret.timeout = this.assertionTimeout;
         // lookup credentials for whitelist
         console.log("Getting user");
-        this.account.getUserById(userId)
+        this.account.updateUserChallenge(userId, ret.assertionChallenge)
+            .then(function(user) {
+                // updateUserChallenge doesn't populate credentials so we have to re-lookup here
+                return this.account.getUserById (userId);
+            })
             .then(function(user) {
                 console.log("getAssertionChallenge user:", user);
                 ret.whitelist = _.map(user.credentials, function(o) {
                     return _.pick(o, ["type", "id"]);
                 });
+                console.log ("getAssertionChallenge returning:", ret);
                 resolve(ret);
             })
             .catch(function(err) {
+                console.log ("ERROR:");
+                console.log (err);
                 reject(err);
             });
 
@@ -284,42 +290,49 @@ FIDOServer.prototype.getAssertionResponse = function(userId, res) {
         console.log("getAssertionResponse");
         // validate response
         if (typeof userId !== "string") {
-            reject(new TypeError("getAssertionResponse: expected userId to be a string"));
+            return reject(new TypeError("getAssertionResponse: expected userId to be a string"));
         }
 
         if (typeof res !== "object") {
-            reject(new TypeError("getAssertionResponse: expected response to be an object"));
+            return reject(new TypeError("getAssertionResponse: expected response to be an object"));
         }
 
         if (typeof res.credential !== "object" ||
             typeof res.credential.type !== "string" ||
             typeof res.credential.id !== "string") {
-            reject(new TypeError("getAssertionResponse: got an unexpected credential format"));
+            return reject(new TypeError("getAssertionResponse: got an unexpected credential format"));
         }
 
         if (typeof res.clientData !== "string") {
-            reject(new TypeError("getAssertionResponse: got an unexpected clientData format"));
+            return reject(new TypeError("getAssertionResponse: got an unexpected clientData format"));
         }
 
         // TODO: clientData must contain challenge, facet, hashAlg
 
         if (typeof res.authenticatorData !== "string") {
-            reject(new TypeError("getAssertionResponse: got an unexpected authenticatorData format"));
+            return reject(new TypeError("getAssertionResponse: got an unexpected authenticatorData format"));
         }
 
         if (typeof res.signature !== "string") {
-            reject(new TypeError("getAssertionResponse: got an unexpected signature format"));
+            return reject(new TypeError("getAssertionResponse: got an unexpected signature format"));
         }
 
         console.log(res);
         console.log("Getting user");
         this.account.getUserById(userId)
             .then(function(user) {
+                if (typeof user !== "object") {
+                    return reject(new TypeError("User not found: " + userId));
+                }
                 console.log("getAssertionChallenge user:", user);
-                console.log(user.attestation);
-                console.log(user.lastAttestationUpdate);
-                // TODO: if now() > user.lastAttestationUpdate + this.assertionTimeout, reject()
-                // TODO: if res.attestation !== user.attestation, reject()
+                if (user.challenge === undefined || 
+                    user.lastChallengeUpdate === undefined) {
+                    return reject(new TypeError("Challenge not found"));
+                }
+                console.log(user.challenge);
+                console.log(user.lastChallengeUpdate);
+                // TODO: if now() > user.lastChallengeUpdate + this.assertionTimeout, reject()
+                // TODO: if res.challenge !== user.challenge, reject()
                 // TODO: hash data & verify signature
                 // publicKey.alg = RSA256, ES256, PS256, ED256
                 // crypto.createVerify('RSA-SHA256');

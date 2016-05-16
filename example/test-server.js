@@ -1,5 +1,4 @@
 var FIDOServer = require("../server.js");
-// var bodyParser = require("body-parser");
 var express = require("express");
 
 var server = new FIDOServer();
@@ -8,8 +7,7 @@ server
     .then(function() {
         var app = express();
 
-        // app.use(bodyParser.json());
-
+        // the home page is register.html
         app.get("/", function(req, res) {
             console.log("serving register.html");
 
