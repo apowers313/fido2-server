@@ -1,4 +1,5 @@
 var _ = require("lodash");
+var MDSC = require("mds-client");
 
 module.exports = MetadataManager;
 
@@ -12,7 +13,7 @@ module.exports = MetadataManager;
 function MetadataManager(opt) {
 	opt = _.cloneDeep(opt);
 	var defaults = {
-		waterlineAdapter: "sails-memory",
+		waterlineAdapter: "sails-disk",
 		metadataDir: "./metadata",
 		mdsUrl: "https://mds.fidoalliance.org"
 	};
@@ -22,14 +23,14 @@ function MetadataManager(opt) {
 }
 
 MetadataManager.prototype.init = function(server) {
-	return Promise.resolve(null);
-	// return new Promise(function(resolve, reject) {
-	// 	return waterlineInit.call(this)
-	// 		.then(function(waterline) {
-	// 			// TODO: "chokidar" watch on watch folder
-	// 			return this.update();
-	// 		}.bind(this));
-	// }.bind(this));
+	return waterlineInit.call(this)
+		.then(function(waterline) {
+			// TODO: "chokidar" watch on watch folder
+			return this.update();
+		}.bind(this))
+		.then(function(update) {
+			return this;
+		});
 };
 
 function waterlineInit() {
@@ -41,12 +42,12 @@ function waterlineInit() {
 		var adapter = require(this.opt.waterlineAdapter);
 		var waterlineConfig = {
 			adapters: {
-				"default": adapter
+				"mmDefault": adapter
 			},
 
 			connections: {
-				default: {
-					adapter: "default"
+				mm: {
+					adapter: "mmDefault"
 				}
 			}
 		};
@@ -54,21 +55,29 @@ function waterlineInit() {
 		// setup waterline models
 		var configCollection = Waterline.Collection.extend({
 			identity: "config",
-			connection: "default",
+			connection: "mm",
 			attributes: {
-				lastUpdate: "datetime",
-				nextUpdate: "date"
+				lastMdsUpdate: "datetime",
+				nextMdsUpdate: "date",
+				serialNo: "integer"
 			}
 		});
 
 		var authenticatorCollection = Waterline.Collection.extend({
 			identity: "authenticator",
-			connection: "default",
+			connection: "mm",
 			attributes: {
 				// TODO: should mirror metadata specification
-				id: "string", // unique, index
-				report: "string",
-				certified: "boolean",
+				id: "string", // required, unique, index
+				aaid: "string",
+				aaguid: "string",
+				attestationCertificateKeyIdentifiers: "array",
+				hash: "string",
+				url: "string", // required, unique
+				timeOfLastStatusChange: "date",
+				statusReports: "json",
+				// reportedHash: "string",
+				// certified: "boolean",
 				metadata: "json"
 			}
 		});
@@ -98,18 +107,135 @@ MetadataManager.prototype.shutdown = function() {
 };
 
 MetadataManager.prototype.update = function() {
-	// TODO: "chokidar" update from watch directory
-	// TODO: check next update time; if it's past then update
-	return Promise.resolve(null);
+	return new Promise(function(resolve, reject) {
+		// TODO: "scandir" to update new / updated files from watch directory
+
+		// TODO: check next update time; if it's past then update
+		var updateMds = function() {
+			return new Promise(function(resolve, reject) {
+				var mdsClient = new MDSC();
+				var toc;
+				return mdsClient.fetchToc()
+					// fetch MDS TOC
+					.then(function(retToc) {
+						// TODO: check return?
+						toc = retToc;
+						return this.getConfig();
+					}.bind(this))
+					// save config
+					.then(function(c) {
+						console.log(c);
+						config = c || {};
+						config.lastMdsUpdate = new Date();
+						config.nextMdsUpdate = toc.nextUpdate;
+						config.serialNo = toc.no;
+						console.log(config);
+
+						if (c === undefined) {
+							return this.setConfig(config);
+						} else {
+							return this.updateConfig(config);
+						}
+						// return this.getConfig();
+					}.bind(this))
+					// fetch entries
+					.then(function(config) {
+						console.log("Got config");
+						console.log(config);
+						return mdsClient.fetchEntries();
+					})
+					// save / update all entries
+					.then(function(entries) {
+						// TODO: filter errors
+						var i, id, p, promiseList = [];
+						for (i = 0; i < entries.length; i++) {
+							// console.log("Doing Entry:", entries[i]);
+							// TODO: not sure this is the right algorithm for setting an ID
+							entries[i].id = entries[i].aaid ||
+								entries[i].aaguid ||
+								entries[i].attestationCertificateKeyIdentifiers;
+							console.log("Doing Entry ID:", entries[i].id);
+							p = this.getAuthenticatorById(id)
+								.then(function(authn) {
+									console.log ("Authn:", authn);
+									console.log ("i:", i);
+									// if (authn === undefined) {
+									// 	console.log("ID not found:", entries[i].id);
+									// 	return this.createAuthenticator(entries[i]);
+									// } else {
+									// 	console.log("ID found:", entries[i].id);
+									// 	return this.updateAuthenticator(entries[i]);
+									// }
+								}.bind(this));
+							promiseList.push(p);
+						}
+						console.log("doing Promise.all");
+						return Promise.all(promiseList);
+					}.bind(this))
+					.then(function(ps) {
+						console.log("Promise.all done");
+						return resolve(true);
+					})
+					.catch(function(err) {
+						console.log("ERROR IN UPDATE MDS");
+						console.log(err);
+						return reject(err);
+					});
+			}.bind(this));
+		}.bind(this);
+
+		// grab our config to see if we need to update
+		this.getConfig().then(function(config) {
+			// if we don't have a config entry, grab the MDS
+			if (config === undefined) {
+				return updateMds()
+					// .catch(function(err) {
+					// 	console.log("ERR1");
+					// 	return reject(err);
+					// });
+			}
+
+			// if our MDS entry is stale, grab the latest one
+			var now = new Date();
+			var next = new Date(config.nextMdsUpdate);
+			if (now.getTime() > next.getTime()) {
+				return updateMds()
+					// .catch(function(err) {
+					// 	console.log("ERR2");
+					// 	return reject(err);
+					// });
+			}
+
+			resolve(null);
+		});
+	}.bind(this));
 };
 
-function updateMds() {
 
-}
 
 function updateWatchFolder() {
 
 }
+
+MetadataManager.prototype.getConfig = function() {
+	return this.config.find().then(function(configs) {
+		if (configs.length > 1) {
+			return Promise.reject(new Error("Too many configs found in database: " + configs.length));
+		} else if (configs.length === 0) {
+			return undefined;
+		}
+		return configs[0];
+	});
+};
+
+MetadataManager.prototype.setConfig = function(config) {
+	return this.config.create(config);
+};
+
+MetadataManager.prototype.updateConfig = function(config) {
+	console.log("updating config");
+	return this.config.update({}, config);
+};
 
 MetadataManager.prototype.listAuthenticators = function() {
 	return Promise.resolve([]);
@@ -117,20 +243,16 @@ MetadataManager.prototype.listAuthenticators = function() {
 
 MetadataManager.prototype.createAuthenticator = function() {
 	return Promise.resolve(null);
-}
+};
 
-MetadataManager.prototype.getAuthenticatorById = function() {
+MetadataManager.prototype.getAuthenticatorById = function(id) {
 	return Promise.resolve(null);
 };
 
 MetadataManager.prototype.updateAuthenticator = function() {
 	return Promise.resolve(null);
-}
+};
 
 MetadataManager.prototype.deleteAuthenticator = function() {
 	return Promise.resolve(null);
-}
-
-MetadataManager.prototype.getConfig = function() {
-	return Promise.resolve(null);
-}
+};

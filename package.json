@@ -1,6 +1,6 @@
 {
   "name": "fido2-server",
-  "version": "0.0.1",
+  "version": "0.5.0",
   "description": "A FIDO 2.0 / W3C WebAuthn server",
   "main": "server.js",
   "scripts": {
@@ -37,6 +37,7 @@
     "async": "^2.0.0-rc.4",
     "bunyan": "^1.8.1",
     "lodash": "^4.11.2",
+    "mds-client": "^1.1.1",
     "node-uuid": "^1.4.7",
     "rc": "^1.1.6",
     "restify": "^4.0.4",
