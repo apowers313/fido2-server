@@ -157,8 +157,6 @@ MetadataManager.prototype.update = function() {
 							console.log("Doing Entry ID:", entries[i].id);
 							p = this.getAuthenticatorById(id)
 								.then(function(authn) {
-									console.log ("Authn:", authn);
-									console.log ("i:", i);
 									// if (authn === undefined) {
 									// 	console.log("ID not found:", entries[i].id);
 									// 	return this.createAuthenticator(entries[i]);
@@ -166,7 +164,11 @@ MetadataManager.prototype.update = function() {
 									// 	console.log("ID found:", entries[i].id);
 									// 	return this.updateAuthenticator(entries[i]);
 									// }
-								}.bind(this));
+									return authn;
+								}.bind(this))
+								.catch(function(err) {
+									return err;
+								});
 							promiseList.push(p);
 						}
 						console.log("doing Promise.all");
@@ -174,6 +176,7 @@ MetadataManager.prototype.update = function() {
 					}.bind(this))
 					.then(function(ps) {
 						console.log("Promise.all done");
+						console.log(ps);
 						return resolve(true);
 					})
 					.catch(function(err) {
@@ -188,25 +191,32 @@ MetadataManager.prototype.update = function() {
 		this.getConfig().then(function(config) {
 			// if we don't have a config entry, grab the MDS
 			if (config === undefined) {
-				return updateMds()
-					// .catch(function(err) {
-					// 	console.log("ERR1");
-					// 	return reject(err);
-					// });
+				updateMds()
+					.then(function(res) {
+						return resolve(res);
+					})
+					.catch(function(err) {
+						console.log("ERR1");
+						return reject(err);
+					});
 			}
 
 			// if our MDS entry is stale, grab the latest one
 			var now = new Date();
 			var next = new Date(config.nextMdsUpdate);
 			if (now.getTime() > next.getTime()) {
-				return updateMds()
-					// .catch(function(err) {
-					// 	console.log("ERR2");
-					// 	return reject(err);
-					// });
+				updateMds()
+					.then(function(res) {
+						return resolve(res);
+					})
+					.catch(function(err) {
+						console.log("ERR2");
+						return reject(err);
+					});
 			}
 
-			resolve(null);
+			console.log("METADATA MANAGER DONE");
+			return resolve(null);
 		});
 	}.bind(this));
 };
@@ -241,7 +251,7 @@ MetadataManager.prototype.listAuthenticators = function() {
 	return Promise.resolve([]);
 };
 
-MetadataManager.prototype.createAuthenticator = function() {
+MetadataManager.prototype.createAuthenticator = function(authn) {
 	return Promise.resolve(null);
 };
 
