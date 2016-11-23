@@ -38,10 +38,10 @@
     "bunyan": "^1.8.1",
     "lodash": "^4.11.2",
     "mds-client": "^1.1.1",
-    "node-uuid": "^1.4.7",
     "rc": "^1.1.6",
     "restify": "^4.0.4",
     "sails-disk": "^0.10.9",
+    "uuid": "^3.0.0",
     "waterline": "^0.12.1"
   }
 }

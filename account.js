@@ -1,7 +1,7 @@
 var Waterline = require("waterline");
 var sailsMemoryAdapter = require("sails-memory");
 var async = require("async");
-var uuid = require("node-uuid");
+var uuid = require("uuid");
 
 module.exports = ServerAccount;
 
