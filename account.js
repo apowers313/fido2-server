@@ -1,5 +1,4 @@
-var Waterline = require("waterline");
-var sailsMemoryAdapter = require("sails-memory");
+var _ = require("lodash");
 var async = require("async");
 var uuid = require("node-uuid");
 
@@ -10,28 +9,38 @@ module.exports = ServerAccount;
 /**
  * CRUD operations for accounts and credentials, based on Waterline
  */
-function ServerAccount(opt) {}
+function ServerAccount(opt) {
+	opt = _.cloneDeep(opt);
+	var defaults = {
+		waterlineAdapter: "sails-memory",
+	};
+	opt = _.defaultsDeep(opt, defaults);
+	// TODO: verify options
+	this.opt = opt;
+}
 
 ServerAccount.prototype.init = function(server) {
 	return new Promise(function(resolve, reject) {
+		var Waterline = require("waterline");
 		var waterline = new Waterline();
+		var adapter = require(this.opt.waterlineAdapter);
 
 		var waterlineConfig = {
 			adapters: {
-				"memory": sailsMemoryAdapter
+				"acctDefault": adapter // TODO: use default
 			},
 
 			connections: {
-				default: {
-					adapter: "memory"
+				acct: {
+					adapter: "acctDefault"
 				}
 			}
 		};
 
 		var userCollection = Waterline.Collection.extend({
 			identity: "user",
-			connection: "default",
-			attributes: { // TODO
+			connection: "acct",
+			attributes: {
 				firstName: "string",
 				lastName: "string",
 				id: { // account name, email, etc.
@@ -53,7 +62,6 @@ ServerAccount.prototype.init = function(server) {
 				lastChallengeUpdate: "datetime",
 				otherInfo: "json",
 
-				// Add a reference to Pets
 				credentials: {
 					collection: "credential",
 					via: "user"
@@ -71,7 +79,7 @@ ServerAccount.prototype.init = function(server) {
 
 		var credentialCollection = Waterline.Collection.extend({
 			identity: "credential",
-			connection: "default",
+			connection: "acct",
 			attributes: {
 				type: {
 					type: "string",
@@ -111,6 +119,7 @@ ServerAccount.prototype.init = function(server) {
 			this.user = ontology.collections.user;
 			this.credential = ontology.collections.credential;
 
+			console.log ("ACCOUNT DONE");
 			return resolve(this);
 		}.bind(this));
 	}.bind(this));
@@ -151,14 +160,6 @@ ServerAccount.prototype.createUser = function(id, userInfo) {
 	return this.user.create(user);
 };
 
-ServerAccount.prototype.getUserByGuid = function(guid) {
-	return this.user
-		.findOne()
-		.where({
-			guid: guid
-		}).populate("credentials");
-};
-
 ServerAccount.prototype.getUserById = function(id) {
 	return this.user
 		.findOne()
@@ -168,6 +169,7 @@ ServerAccount.prototype.getUserById = function(id) {
 		.populate("credentials");
 };
 
+// TODO: remove this in favor of updateUserById
 ServerAccount.prototype.updateUserChallenge = function(id, challenge) {
 	if (typeof id !== "string") {
 		return Promise.reject(new TypeError("updateUserChallenge expected id to be string"));
@@ -188,15 +190,15 @@ ServerAccount.prototype.updateUserChallenge = function(id, challenge) {
 };
 
 ServerAccount.prototype.updateUser = function() {
-
+	// TODO
 };
 
 ServerAccount.prototype.deleteUser = function() {
-
+	// TODO
 };
 
 ServerAccount.prototype.listCredentials = function() {
-
+	// TODO
 };
 
 ServerAccount.prototype.createCredential = function(userId, credential) {
@@ -222,13 +224,13 @@ ServerAccount.prototype.createCredential = function(userId, credential) {
 };
 
 ServerAccount.prototype.getCredential = function() {
-
+	// TODO
 };
 
 ServerAccount.prototype.updateCredential = function() {
-
+	// TODO
 };
 
 ServerAccount.prototype.deleteCredential = function() {
-
+	// TODO
 };

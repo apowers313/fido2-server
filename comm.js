@@ -15,6 +15,7 @@ function ServerComm(opt) {
 	};
 	opt = _.defaultsDeep(opt, defaults);
 	// TODO: check options
+	// TODO: https
 	this.loginRoute = opt.loginRoute;
 	this.registerRoute = opt.registerRoute;
 	this.port = opt.port;
@@ -25,7 +26,6 @@ function ServerComm(opt) {
  */
 ServerComm.prototype.init = function(server) {
 	this.server = server;
-	console.log(server);
 	var restConfig = {
 		// TODO: key & certificate
 		name: this.server.rpid,
@@ -35,7 +35,6 @@ ServerComm.prototype.init = function(server) {
 		// log: this.server.audit.bunyan
 	};
 
-	console.log("RPID:", this.server.rpid);
 	var restServer = restify.createServer(restConfig);
 	restServer.use(restify.acceptParser(restServer.acceptable));
 	restServer.use(restify.queryParser());
@@ -107,6 +106,9 @@ ServerComm.prototype.init = function(server) {
 			.catch(function(err) {
 				console.log("ERROR:");
 				console.log(err);
+				console.log("MESSAGE:");
+				console.log(err.message);
+				res.sendStatus(404);
 				res.send({
 					error: err.message
 				});
@@ -138,7 +140,7 @@ ServerComm.prototype.init = function(server) {
 		console.log('%s listening at %s', restServer.name, restServer.url);
 	});
 
-	this.restify = server;
+	this.restify = server; // TODO: restServer?
 
 	return Promise.resolve(this);
 };

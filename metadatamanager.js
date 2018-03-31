@@ -115,6 +115,7 @@ MetadataManager.prototype.update = function() {
 			return new Promise(function(resolve, reject) {
 				var mdsClient = new MDSC();
 				var toc;
+				console.log ("Fetching TOC...");
 				return mdsClient.fetchToc()
 					// fetch MDS TOC
 					.then(function(retToc) {
@@ -124,7 +125,7 @@ MetadataManager.prototype.update = function() {
 					}.bind(this))
 					// save config
 					.then(function(c) {
-						console.log(c);
+						console.log("Config:", c);
 						config = c || {};
 						config.lastMdsUpdate = new Date();
 						config.nextMdsUpdate = toc.nextUpdate;

@@ -20,7 +20,7 @@ function FIDOServer(opt) {
     opt = opt || {};
 
     var defaults = {
-        rpid: "example.com", // TLD + 1
+        rpid: "example.com", // eTLD + 1
         blacklist: [],
         cryptoParameterPrefs: [],
         challengeSize: 32,
@@ -203,10 +203,10 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
             return reject(new TypeError("makeCredentialResponse: got an unexpected publicKey format"));
         }
 
-        // TODO: validate public key based on key type
-        // TODO: verify that publicKey.alg is an algorithm type supported by server
+        // SECURITY TODO: validate public key based on key type
+        // SECURITY TODO: verify that publicKey.alg is an algorithm type supported by server
 
-        // TODO: validate attestations
+        // SECURITY TODO: validate attestations
         console.log("Attestation:", res.attestation);
         if (res.attestation !== null) {
             return reject(new TypeError("makeCredentialResponse: attestations not currently handled"));
@@ -219,7 +219,7 @@ FIDOServer.prototype.makeCredentialResponse = function(userId, res) {
                 if (user === undefined) {
                     return reject(new FIDOServerError("User not found", "UserNotFound"));
                 }
-                // TODO:
+                // SECURITY TODO:
                 // - make sure attestation matches
                 // - lastAttestationUpdate must be somewhat recent (per some definable policy)
                 // -- timeout for lastAttestationUpdate may be tied to the timeout parameter of makeCredential
@@ -255,7 +255,7 @@ FIDOServer.prototype.getAssertionChallenge = function(userId) {
         }
 
         var ret = {};
-        // TODO: ret.assertionExtensions = [];
+        // SECURITY TODO: ret.assertionExtensions = [];
         ret.assertionChallenge = crypto.randomBytes(this.challengeSize).toString("hex");
         ret.timeout = this.assertionTimeout;
         // lookup credentials for whitelist
@@ -264,8 +264,9 @@ FIDOServer.prototype.getAssertionChallenge = function(userId) {
             .then(function(user) {
                 // updateUserChallenge doesn't populate credentials so we have to re-lookup here
                 return this.account.getUserById (userId);
-            })
+            }.bind(this))
             .then(function(user) {
+                if (user === undefined) return (reject (new Error ("User not found")));
                 console.log("getAssertionChallenge user:", user);
                 ret.whitelist = _.map(user.credentials, function(o) {
                     return _.pick(o, ["type", "id"]);
@@ -288,6 +289,7 @@ FIDOServer.prototype.getAssertionChallenge = function(userId) {
 FIDOServer.prototype.getAssertionResponse = function(userId, res) {
     return new Promise(function(resolve, reject) {
         console.log("getAssertionResponse");
+        console.log ("res:", res);
         // validate response
         if (typeof userId !== "string") {
             return reject(new TypeError("getAssertionResponse: expected userId to be a string"));
@@ -300,14 +302,14 @@ FIDOServer.prototype.getAssertionResponse = function(userId, res) {
         if (typeof res.credential !== "object" ||
             typeof res.credential.type !== "string" ||
             typeof res.credential.id !== "string") {
-            return reject(new TypeError("getAssertionResponse: got an unexpected credential format"));
+            return reject(new TypeError("getAssertionResponse: got an unexpected credential format: " + res.credential));
         }
 
         if (typeof res.clientData !== "string") {
             return reject(new TypeError("getAssertionResponse: got an unexpected clientData format"));
         }
 
-        // TODO: clientData must contain challenge, facet, hashAlg
+        // SECURITY TODO: clientData must contain challenge, facet, hashAlg
 
         if (typeof res.authenticatorData !== "string") {
             return reject(new TypeError("getAssertionResponse: got an unexpected authenticatorData format"));
@@ -331,13 +333,13 @@ FIDOServer.prototype.getAssertionResponse = function(userId, res) {
                 }
                 console.log(user.challenge);
                 console.log(user.lastChallengeUpdate);
-                // TODO: if now() > user.lastChallengeUpdate + this.assertionTimeout, reject()
-                // TODO: if res.challenge !== user.challenge, reject()
-                // TODO: hash data & verify signature
+                // SECURITY TODO: if now() > user.lastChallengeUpdate + this.assertionTimeout, reject()
+                // SECURITY TODO: if res.challenge !== user.challenge, reject()
+                // SECURITY TODO: hash data & verify signature
                 // publicKey.alg = RSA256, ES256, PS256, ED256
                 // crypto.createVerify('RSA-SHA256');
-                // jwkToPem(); 
-                // TODO: verify tokenBinding, if it exists
+                // jwkToPem();
+                // SECURITY TODO: verify tokenBinding, if it exists
                 // TODO: process extensions
                 // TODO: riskengine.evaluate
                 var ret = {

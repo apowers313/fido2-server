@@ -21,7 +21,7 @@ describe.only("basic tests", function(done) {
 		});
 	});
 
-	it.skip("gets getAttestationChallenge", function(done) {
+	it("gets getAttestationChallenge", function(done) {
 		assert.equal(server.rpid, "example.com");
 		console.log("doing getAttestationChallenge");
 		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
@@ -38,7 +38,7 @@ describe.only("basic tests", function(done) {
 			}.bind(this));
 	});
 
-	it.skip("get makeCredentialResponse", function() {
+	it("get makeCredentialResponse", function() {
 		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
 			.then(function(user) {
 				console.log("created user:", user);
@@ -55,7 +55,7 @@ describe.only("basic tests", function(done) {
 			});
 	});
 
-	it.skip("get getAssertionChallenge", function() {
+	it("get getAssertionChallenge", function() {
 		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
 			.then(function(user) {
 				console.log("created user:", user);
@@ -77,7 +77,7 @@ describe.only("basic tests", function(done) {
 			});
 	});
 
-	it.only("get getAssertionResponse", function() {
+	it.skip("get getAssertionResponse", function() {
 		return server.account.createUser(helpers.userId, helpers.sampleUserInfo)
 			.then(function(user) {
 				console.log("created user:", user);
@@ -107,6 +107,8 @@ describe.only("basic tests", function(done) {
 	it("makeCredentialResponse user not found");
 	it("getAssertionChallenge user not found");
 	it("getAssertionResponse user not found");
+	it("makeCredentialResponse challenge not found");
+	it("getAssertionResponse challenge not found");
 	it("getAssertionResponse bad challenge");
 	it("makeCredentialResponse bad challenge");
 });

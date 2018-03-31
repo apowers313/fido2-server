@@ -48,7 +48,8 @@ ServerAudit.prototype.init = function(server) {
             this.shutdown();
         }.bind(this));
 
-        resolve(this);
+        console.log ("AUDIT DONE");
+        return resolve(this);
     }.bind(this));
 };
 
@@ -128,7 +129,7 @@ ServerAudit.prototype.list = function() {
 
 /*
  * Helper function for calling functions with variable arguments
- */ 
+ */
 function callWithArgs(ctx, fnName, args) {
     var fn = ctx[fnName];
     fn.apply(ctx, Array.prototype.slice.call(args));
