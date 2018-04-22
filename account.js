@@ -1,6 +1,6 @@
 var _ = require("lodash");
 var async = require("async");
-var uuid = require("node-uuid");
+var uuid = require("uuid");
 
 module.exports = ServerAccount;
 
